@@ -6,9 +6,9 @@ import { usePathname } from "next/navigation";
 import { useSidebar } from "../context/SidebarContext";
 import {
   BoxCubeIcon,
-  CalenderIcon,
   ChevronDownIcon,
-  GridIcon,
+  FolderIcon,
+  DocsIcon,
   HorizontaLDots,
   PlugInIcon,
   UserCircleIcon,
@@ -23,14 +23,14 @@ type NavItem = {
 
 const navItems: NavItem[] = [
   {
-    icon: <GridIcon />,
-    name: "Schemes",
-    path: "/dashboard",
+    icon: <DocsIcon />,
+    name: "Scheme",
+    path: "/scheme",
   },
   {
-    icon: <CalenderIcon />,
+    icon: <FolderIcon />,
     name: "Category",
-    path: "/Category",
+    path: "/category",
   },
   {
     icon: <UserCircleIcon />,
@@ -281,22 +281,22 @@ const AppSidebar: React.FC = () => {
             <>
               <Image
                 className="dark:hidden"
-                src="/images/logo/logo.svg"
+                src="/images/Layer_1.png"
                 alt="Logo"
-                width={150}
-                height={40}
+                width={250}
+                height={80}
               />
               <Image
                 className="hidden dark:block"
-                src="/images/logo/logo-dark.svg"
+                src="/images/Layer_1.png"
                 alt="Logo"
-                width={150}
-                height={40}
+                width={250}
+                height={80}
               />
             </>
           ) : (
             <Image
-              src="/images/logo/logo-icon.svg"
+              src="/images/Layer_1.png"
               alt="Logo"
               width={32}
               height={32}

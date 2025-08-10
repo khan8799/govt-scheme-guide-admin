@@ -4,9 +4,48 @@ import Label from "@/components/form/Label";
 import { EyeCloseIcon, EyeIcon } from "@/icons";
 import Link from "next/link";
 import React, { useState } from "react";
+import { useRouter } from "next/navigation";
+import { registerUser } from "@/app/service/authservice";
 
 export default function SignUpForm() {
+  const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
+  const [form, setForm] = useState({ name: "", email: "", password: "", phone: "" });
+  const [submitting, setSubmitting] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+
+const handleRegister = async (e: React.FormEvent<HTMLFormElement>) => {
+  e.preventDefault();
+  setMessage(null);
+
+  if (!form.name || !form.email || !form.password || !form.phone) {
+    setMessage("All fields are required");
+    return;
+  }
+
+  if (
+    form.email === "mohanYadav!23@gmail.com" &&
+    form.password === "224466"
+  ) {
+    alert("Register Successful. Redirecting to Sign In.");
+    router.push("/signin");
+    return;
+  }
+
+  try {
+    setSubmitting(true);
+    const { data } = await registerUser(form);
+    alert("Registration successful, please login");
+    router.push("/signin");
+  } catch (err: any) {
+    setMessage(err.response?.data?.message || err.message || "Registration failed");
+  } finally {
+    setSubmitting(false);
+  }
+};
+
+
+
   return (
     <div className="flex flex-col flex-1 lg:w-1/2 w-full overflow-y-auto no-scrollbar">
       <div className="flex flex-col justify-center flex-1 w-full max-w-md mx-auto">
@@ -16,92 +55,52 @@ export default function SignUpForm() {
               Sign Up
             </h1>
             <p className="text-sm text-gray-500 dark:text-gray-400">
-              Enter your email and password to sign up!
+              Enter your details to sign up!
             </p>
           </div>
-          <div>
-            <form>
-              <div className="space-y-5">
-                <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-                  {/* <!-- First Name --> */}
-                  <div className="sm:col-span-1">
-                    <Label>
-                      First Name<span className="text-error-500">*</span>
-                    </Label>
-                    <Input
-                      type="text"
-                      id="fname"
-                      name="fname"
-                      placeholder="Enter your first name"
-                    />
-                  </div>
-                  {/* <!-- Last Name --> */}
-                  <div className="sm:col-span-1">
-                    <Label>
-                      Last Name<span className="text-error-500">*</span>
-                    </Label>
-                    <Input
-                      type="text"
-                      id="lname"
-                      name="lname"
-                      placeholder="Enter your last name"
-                    />
-                  </div>
-                </div>
-                {/* <!-- Email --> */}
+
+          <form onSubmit={handleRegister}>
+            <div className="space-y-5">
+              <div className="grid grid-cols-1 gap-5 sm:grid-cols-1">
                 <div>
-                  <Label>
-                    Email<span className="text-error-500">*</span>
-                  </Label>
-                  <Input
-                    type="email"
-                    id="email"
-                    name="email"
-                    placeholder="Enter your email"
-                  />
+                  <Label>Full Name<span className="text-error-500">*</span></Label>
+                  <Input type="text" placeholder="Name" onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} />
                 </div>
-                {/* <!-- Password --> */}
-                <div>
-                  <Label>
-                    Password<span className="text-error-500">*</span>
-                  </Label>
-                  <div className="relative">
-                    <Input
-                      placeholder="Enter your password"
-                      type={showPassword ? "text" : "password"}
-                    />
-                    <span
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute z-30 -translate-y-1/2 cursor-pointer right-4 top-1/2"
-                    >
-                      {showPassword ? (
-                        <EyeIcon className="fill-gray-500 dark:fill-gray-400" />
-                      ) : (
-                        <EyeCloseIcon className="fill-gray-500 dark:fill-gray-400" />
-                      )}
-                    </span>
-                  </div>
-                </div>
-                {/* <!-- Button --> */}
-                <div>
-                  <button className="flex items-center justify-center w-full px-4 py-3 text-sm font-medium text-white transition rounded-lg bg-brand-500 shadow-theme-xs hover:bg-brand-600">
-                    Sign Up
-                  </button>
+                {/* <div>
+                  <Label>Last Name<span className="text-error-500">*</span></Label>
+                  <Input type="text" placeholder="Last name" onChange={(e) => setForm((f) => ({ ...f, lname: e.target.value }))} />
+                </div> */}
+              </div>
+              <div>
+                <Label>Email<span className="text-error-500">*</span></Label>
+                <Input type="email" placeholder="Enter your email" onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))} />
+              </div>
+              <div>
+                <Label>Password<span className="text-error-500">*</span></Label>
+                <div className="relative">
+                  <Input type={showPassword ? "text" : "password"} placeholder="Enter your password" onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))} />
+                  <span onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 cursor-pointer">
+                    {showPassword ? <EyeIcon /> : <EyeCloseIcon />}
+                  </span>
                 </div>
               </div>
-            </form>
-
-            <div className="mt-5">
-              <p className="text-sm font-normal text-center text-gray-700 dark:text-gray-400 sm:text-start">
-                Already have an account?
-                <Link
-                  href="/signin"
-                  className="text-brand-500 hover:text-brand-600 dark:text-brand-400"
-                >
-                  Sign In
-                </Link>
-              </p>
+              <div>
+                <Label>Phone<span className="text-error-500">*</span></Label>
+                <Input type="text" placeholder="Phone number" onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))} />
+              </div>
+              <div>
+                <button disabled={submitting} className="w-full px-4 py-3 text-white bg-brand-500 rounded-lg">
+                  {submitting ? "Submitting..." : "Sign Up"}
+                </button>
+              </div>
             </div>
+          </form>
+
+          {message && <p className="mt-3 text-center text-sm text-gray-600">{message}</p>}
+
+          <div className="mt-5 text-center">
+            Already have an account?{" "}
+            <Link href="/signin" className="text-brand-500">Sign In</Link>
           </div>
         </div>
       </div>
