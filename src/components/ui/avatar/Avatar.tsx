@@ -1,8 +1,9 @@
 import Image from "next/image";
-import React from "react";
+import React, { useState } from "react";
+import { DEFAULT_USER_AVATAR } from "@/config/media";
 
 interface AvatarProps {
-  src: string; // URL of the avatar image
+  src?: string; // URL of the avatar image
   alt?: string; // Alt text for the avatar
   size?: "xsmall" | "small" | "medium" | "large" | "xlarge" | "xxlarge"; // Avatar size
   status?: "online" | "offline" | "busy" | "none"; // Status indicator
@@ -38,6 +39,7 @@ const Avatar: React.FC<AvatarProps> = ({
   size = "medium",
   status = "none",
 }) => {
+  const [currentSrc, setCurrentSrc] = useState<string>(src || DEFAULT_USER_AVATAR);
   return (
     <div className={`relative  rounded-full ${sizeClasses[size]}`}>
       {/* Avatar Image */}
@@ -45,9 +47,12 @@ const Avatar: React.FC<AvatarProps> = ({
         width="0"
         height="0"
         sizes="100vw"
-        src={src}
+        src={currentSrc}
         alt={alt}
         className="object-cover w-full rounded-full"
+        onError={() => {
+          if (currentSrc !== DEFAULT_USER_AVATAR) setCurrentSrc(DEFAULT_USER_AVATAR);
+        }}
       />
 
       {/* Status Indicator */}
