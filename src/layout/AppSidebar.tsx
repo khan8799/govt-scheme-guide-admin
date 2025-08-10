@@ -12,6 +12,7 @@ import {
   HorizontaLDots,
   PlugInIcon,
   UserCircleIcon,
+  StateIcon,
 } from "../icons/index";
 
 type NavItem = {
@@ -23,20 +24,26 @@ type NavItem = {
 
 const navItems: NavItem[] = [
   {
-    icon: <DocsIcon />,
-    name: "Scheme",
-    path: "/scheme",
-  },
-  {
     icon: <FolderIcon />,
     name: "Category",
     path: "/category",
+  },
+  {
+    icon: <StateIcon />,
+    name: "State",
+    path: "/state",
+  },
+  {
+    icon: <DocsIcon />,
+    name: "Scheme",
+    path: "/scheme",
   },
   {
     icon: <UserCircleIcon />,
     name: "User Profile",
     path: "/profile",
   },
+  
 ];
 
 const othersItems: NavItem[] = [

@@ -1,0 +1,2 @@
+export const API_BASE_URL = 'https://govt-scheme-guide-api.onrender.com/api';
+export const DEFAULT_AUTH_TOKEN = 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY4OGZiYjFhYzRhOWNhZTU0MGYzOTZmYSIsInJvbGUiOiIiLCJpYXQiOjE3NTQ4MTgxNjYsImV4cCI6MTc1NDkwNDU2Nn0.IEXBWP4VUWyIgfeAKqpr78jK07mQvxYMEt2aWlCxeHU';
