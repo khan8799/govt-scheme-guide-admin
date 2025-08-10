@@ -4,15 +4,10 @@ import { PlusIcon, TrashIcon } from '@heroicons/react/24/outline';
 import Label from '@/components/form/Label';
 import Input from '@/components/form/input/InputField';
 import Select from '@/components/form/Select';
-import MultiSelect from '@/components/form/MultiSelect';
 import TextArea from '@/components/form/input/TextArea';
-import FileInput from '@/components/form/input/FileInput';
-import Switch from '@/components/form/switch/Switch';
-import { INDIAN_STATES } from '@/config/states';
-import { API_PATHS, fetchJson, postJson } from '@/config/api';
 import Image from 'next/image';
-
-type SchemeStatus = 'active' | 'inactive' | 'draft';
+import { showConfirmation, showSuccess, showError, showLoading } from '@/components/SweetAlert';
+import { API_BASE_URL, DEFAULT_AUTH_TOKEN } from '@/config/confiq';
 
 interface Scheme {
   _id: string;
@@ -27,45 +22,37 @@ interface Scheme {
   financialBenefits: Array<{ subTitle: string; subDescription: string; _id: string }>;
   requiredDocuments: Array<{ subTitle: string; subDescription: string; _id: string }>;
   importantDates: Array<{ label: string; date: string; _id: string }>;
+  salientFeatures: Array<{ subTitle: string; subDescription: string; _id: string }>;
+  applicationProcess: Array<{ subTitle: string; subDescription: string; _id: string }>;
+  frequentlyAskedQuestions: Array<{ question: string; answer: string; _id: string }>;
   isActive: boolean;
   bannerImage?: { url: string; fileId: string };
   cardImage?: { url: string; fileId: string };
   helplineNumber?: { tollFreeNumber: string; emailSupport: string; availability: string };
+  sourcesAndReferences?: { sourceName: string; sourceLink: string };
+  disclaimer?: { description: string };
+  listCategory?: string[];
 }
 
-interface SchemeFormItem {
-  id: number;
+interface State {
+  _id: string;
   name: string;
-  description: string;
-  category: string;
-  state: string;
-  department: string;
-  audience: string[];
-  eligibility: string;
-  benefits: string;
-  requiredDocs: string[];
-  applyUrl: string;
-  contactEmail: string;
-  contactPhone: string;
-  isCentral: boolean;
-  allowComments: boolean;
-  budget: string;
-  tags: string[];
-  startDate: string;
-  endDate: string;
-  status: SchemeStatus;
-  coverImageName?: string;
+  image?: string;
 }
 
-const CATEGORY_OPTIONS = [
-  { value: 'education', label: 'Education' },
-  { value: 'health', label: 'Health' },
-  { value: 'agriculture', label: 'Agriculture' },
-  { value: 'employment', label: 'Employment' },
-  { value: 'housing', label: 'Housing' },
-  { value: 'social-welfare', label: 'Social Welfare' },
-  { value: 'business', label: 'Business' },
-];
+interface Category {
+  _id: string;
+  name: string;
+  image?: string;
+}
+
+interface FormField {
+  label: string;
+  key: string;
+  type: 'text' | 'textarea' | 'date' | 'json' | 'select' | 'multi-select' | 'file';
+  required?: boolean;
+  options?: Array<{ value: string; label: string }>;
+}
 
 
 const SchemePage = () => {
@@ -73,154 +60,322 @@ const SchemePage = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedScheme, setSelectedScheme] = useState<Scheme | null>(null);
-  const [schemes, setSchemes] = useState<SchemeFormItem[]>([]);
   const [filteredSchemes, setFilteredSchemes] = useState<Scheme[]>([]);
   const [selectedState, setSelectedState] = useState<string>('');
   const [selectedCategory, setSelectedCategory] = useState<string>('');
+  const [states, setStates] = useState<State[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [formData, setFormData] = useState<any>({
+    schemeTitle: '',
+    publishedOn: new Date().toISOString().split('T')[0],
+    about: '',
+    objectives: '',
+    category: '',
+    state: [],
+    keyHighlightsOfTheScheme: JSON.stringify([{ schemeName: '', launchedBy: '' }]),
+    eligibilityCriteria: JSON.stringify([{ subTitle: '', subDescription: '' }]),
+    financialBenefits: JSON.stringify([{ subTitle: '', subDescription: '' }]),
+    requiredDocuments: JSON.stringify([{ subTitle: '', subDescription: '' }]),
+    importantDates: JSON.stringify([{ label: '', date: '' }]),
+    salientFeatures: JSON.stringify([{ subTitle: '', subDescription: '' }]),
+    applicationProcess: JSON.stringify([{ subTitle: '', subDescription: '' }]),
+    helplineNumber: JSON.stringify({ 
+      tollFreeNumber: '', 
+      emailSupport: '', 
+      availability: '' 
+    }),
+    frequentlyAskedQuestions: JSON.stringify([{ question: '', answer: '' }]),
+    sourcesAndReferences: JSON.stringify({ sourceName: '', sourceLink: '' }),
+    disclaimer: JSON.stringify({ description: '' }),
+    listCategory: JSON.stringify([]),
+    bannerImage: null,
+    cardImage: null
+  });
 
-  // Fetch all schemes
+  const formFields: FormField[] = [
+    { label: 'Scheme Title', key: 'schemeTitle', type: 'text', required: true },
+    { label: 'Published On', key: 'publishedOn', type: 'date', required: true },
+    { label: 'About', key: 'about', type: 'textarea', required: true },
+    { label: 'Objectives', key: 'objectives', type: 'textarea', required: true },
+    { 
+      label: 'Category', 
+      key: 'category', 
+      type: 'select', 
+      required: true,
+      options: categories.map(cat => ({ value: cat._id, label: cat.name }))
+    },
+    { 
+      label: 'States', 
+      key: 'state', 
+      type: 'multi-select', 
+      required: true,
+      options: states.map(state => ({ value: state._id, label: state.name }))
+    },
+    { label: 'Key Highlights', key: 'keyHighlightsOfTheScheme', type: 'json' },
+    { label: 'Eligibility Criteria', key: 'eligibilityCriteria', type: 'json' },
+    { label: 'Financial Benefits', key: 'financialBenefits', type: 'json' },
+    { label: 'Required Documents', key: 'requiredDocuments', type: 'json' },
+    { label: 'Important Dates', key: 'importantDates', type: 'json' },
+    { label: 'Salient Features', key: 'salientFeatures', type: 'json' },
+    { label: 'Application Process', key: 'applicationProcess', type: 'json' },
+    { label: 'Helpline Number', key: 'helplineNumber', type: 'json' },
+    { label: 'FAQ', key: 'frequentlyAskedQuestions', type: 'json' },
+    { label: 'Sources', key: 'sourcesAndReferences', type: 'json' },
+    { label: 'Disclaimer', key: 'disclaimer', type: 'json' },
+    { label: 'List Category', key: 'listCategory', type: 'json' },
+    { label: 'Banner Image', key: 'bannerImage', type: 'file' },
+    { label: 'Card Image', key: 'cardImage', type: 'file' }
+  ];
+
+  // Fetch all states and categories
+  useEffect(() => {
+    const loadInitialData = async () => {
+      setLoading(true);
+      try {
+        const [statesRes, categoriesRes] = await Promise.all([
+          fetch(`${API_BASE_URL}/user/getAllStates`, {
+            headers: {
+              'Authorization': DEFAULT_AUTH_TOKEN
+            }
+          }),
+          fetch(`${API_BASE_URL}/user/allCategories`, {
+            headers: {
+              'Authorization': DEFAULT_AUTH_TOKEN
+            }
+          })
+        ]);
+
+        if (!statesRes.ok) throw new Error('Failed to load states');
+        if (!categoriesRes.ok) throw new Error('Failed to load categories');
+
+        const statesData = await statesRes.json();
+        const categoriesData = await categoriesRes.json();
+
+        setStates(statesData.data || []);
+        setCategories(categoriesData.data || []);
+      } catch (e: unknown) {
+        setError(e.message || 'Failed to load initial data');
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadInitialData();
+  }, []);
+
+  // Fetch all schemes or filtered schemes
   useEffect(() => {
     const loadSchemes = async () => {
       setLoading(true);
       setError(null);
       try {
-        const data = await fetchJson<Scheme[]>(API_PATHS.getAllSchemes);
-        setFilteredSchemes(data);
-      } catch (e: any) {
+        let url = `${API_BASE_URL}/admin/getSchemesByCategoryregisterScheme`;
+        
+        if (selectedState) {
+          url += `?stateId=${selectedState}`;
+        } else if (selectedCategory) {
+          url += `?categoryId=${selectedCategory}`;
+        } else {
+          url = `${API_BASE_URL}/user/getSchemesByCategory`;
+        }
+
+        const res = await fetch(url, {
+          headers: {
+            'Authorization': DEFAULT_AUTH_TOKEN
+          }
+        });
+
+        if (!res.ok) throw new Error('Failed to load schemes');
+        
+        const data = await res.json();
+        setFilteredSchemes(data.data || data);
+      } catch (e: unknown) {
         setError(e.message || 'Failed to load schemes');
       } finally {
         setLoading(false);
       }
     };
     loadSchemes();
-  }, []);
-
-  // Filter schemes by state or category
-  useEffect(() => {
-    const filterSchemes = async () => {
-      if (!selectedState && !selectedCategory) return;
-      
-      setLoading(true);
-      try {
-        let data: Scheme[] = [];
-        if (selectedState && selectedCategory) {
-          const stateData = await fetchJson<Scheme[]>(`${API_PATHS.getSchemesByState}/${selectedState}`);
-          data = stateData.filter(scheme => 
-            scheme.category.toLowerCase() === selectedCategory.toLowerCase()
-          );
-        } else if (selectedState) {
-          data = await fetchJson<Scheme[]>(`${API_PATHS.getSchemesByState}/${selectedState}`);
-        } else if (selectedCategory) {
-          data = await fetchJson<Scheme[]>(`${API_PATHS.getSchemesByCategory}/${selectedCategory}`);
-        }
-        setFilteredSchemes(data);
-      } catch (e: any) {
-        setError(e.message || 'Failed to filter schemes');
-      } finally {
-        setLoading(false);
-      }
-    };
-    filterSchemes();
   }, [selectedState, selectedCategory]);
 
   const fetchSchemeDetails = async (id: string) => {
+    const loadingAlert = showLoading('Loading scheme details...');
     try {
-      const data = await fetchJson<Scheme>(`${API_PATHS.getSchemeById}/${id}`);
+      const res = await fetch(`${API_BASE_URL}/user/getSchemeById/${id}`, {
+        headers: {
+          'Authorization': DEFAULT_AUTH_TOKEN
+        }
+      });
+      
+      if (!res.ok) throw new Error('Failed to load scheme details');
+      
+      const data = await res.json();
       setSelectedScheme(data);
-    } catch (e: any) {
-      setError(e.message || 'Failed to load scheme details');
+      loadingAlert.close();
+    } catch (e: unknown) {
+      loadingAlert.close();
+      await showError(e.message || 'Failed to load scheme details');
     }
   };
 
   const resetFilters = () => {
     setSelectedState('');
     setSelectedCategory('');
-    // Reload all schemes
-    setLoading(true);
-    fetchJson<Scheme[]>(API_PATHS.getAllSchemes)
-      .then(data => setFilteredSchemes(data))
-      .catch(e => setError(e.message || 'Failed to reset filters'))
-      .finally(() => setLoading(false));
   };
 
-  const addScheme = (): void => {
-    setSchemes([
-      ...schemes,
-      {
-        id: schemes.length + 1,
-        name: '',
-        description: '',
-        category: '',
-        state: '',
-        department: '',
-        audience: [],
-        eligibility: '',
-        benefits: '',
-        requiredDocs: [],
-        applyUrl: '',
-        contactEmail: '',
-        contactPhone: '',
-        isCentral: false,
-        allowComments: true,
-        budget: '',
-        tags: [],
-        startDate: '',
-        endDate: '',
-        status: 'active',
-        coverImageName: undefined,
-      },
-    ]);
+  const handleFormChange = (key: string, value: unknown) => {
+    setFormData(prev => ({ ...prev, [key]: value }));
   };
 
-  const deleteScheme = (id: number): void => {
-    setSchemes(schemes.filter((scheme) => scheme.id !== id));
-  };
-
-  const handleChange = (
-    id: number,
-    field: keyof SchemeFormItem,
-    value: string | boolean | string[]
-  ): void => {
-    setSchemes((prev) =>
-      prev.map((scheme) => (scheme.id === id ? { ...scheme, [field]: value } : scheme))
-    );
-  };
-
-  const handleTagsChange = (id: number, value: string) => {
-    const tags = value
-      .split(',')
-      .map((t) => t.trim())
-      .filter(Boolean);
-    handleChange(id, 'tags', tags);
+  const handleFileChange = (key: string, file: File | null) => {
+    setFormData(prev => ({ ...prev, [key]: file }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Validation logic
-    const errors: string[] = [];
-    schemes.forEach((s, idx) => {
-      if (!s.name.trim()) errors.push(`Scheme #${idx + 1}: Name is required`);
-      if (!s.category) errors.push(`Scheme #${idx + 1}: Category is required`);
-      if (!s.state) errors.push(`Scheme #${idx + 1}: State is required`);
-      if (!s.description.trim()) errors.push(`Scheme #${idx + 1}: Description is required`);
-      if (s.applyUrl && !/^https?:\/\//i.test(s.applyUrl)) errors.push(`Scheme #${idx + 1}: Apply URL must start with http or https`);
-      if (s.contactEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s.contactEmail)) errors.push(`Scheme #${idx + 1}: Contact Email is invalid`);
-      if (s.endDate && s.startDate && s.endDate < s.startDate) errors.push(`Scheme #${idx + 1}: End date cannot be before start date`);
-    });
-    if (errors.length) {
-      alert(errors.join('\n'));
-      return;
-    }
-
+    const loadingAlert = showLoading('Creating scheme...');
+    
     try {
-      await postJson(API_PATHS.registerScheme, schemes);
-      alert('Schemes saved successfully!');
+      const data = new FormData();
+      
+      // Add all form fields to FormData
+      Object.keys(formData).forEach(key => {
+        if (key === 'bannerImage' || key === 'cardImage') {
+          if (formData[key]) {
+            data.append(key, formData[key]);
+          }
+        } else if (key === 'state') {
+          formData.state.forEach((state: string) => data.append('state[]', state));
+        } else {
+          data.append(key, formData[key]);
+        }
+      });
+
+      const res = await fetch(`${API_BASE_URL}/admin/registerScheme`, {
+        method: 'POST',
+        headers: {
+          'Authorization': DEFAULT_AUTH_TOKEN
+        },
+        body: data
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.message || 'Failed to create scheme');
+      }
+
+      loadingAlert.close();
+      await showSuccess('Scheme created successfully!');
       setIsAddMode(false);
-      // Refresh list
-      const data = await fetchJson<Scheme[]>(API_PATHS.getAllSchemes);
-      setFilteredSchemes(data);
+      resetFilters();
+      // Reset form data
+      setFormData({
+        schemeTitle: '',
+        publishedOn: new Date().toISOString().split('T')[0],
+        about: '',
+        objectives: '',
+        category: '',
+        state: [],
+        keyHighlightsOfTheScheme: JSON.stringify([{ schemeName: '', launchedBy: '' }]),
+        eligibilityCriteria: JSON.stringify([{ subTitle: '', subDescription: '' }]),
+        financialBenefits: JSON.stringify([{ subTitle: '', subDescription: '' }]),
+        requiredDocuments: JSON.stringify([{ subTitle: '', subDescription: '' }]),
+        importantDates: JSON.stringify([{ label: '', date: '' }]),
+        salientFeatures: JSON.stringify([{ subTitle: '', subDescription: '' }]),
+        applicationProcess: JSON.stringify([{ subTitle: '', subDescription: '' }]),
+        helplineNumber: JSON.stringify({ 
+          tollFreeNumber: '', 
+          emailSupport: '', 
+          availability: '' 
+        }),
+        frequentlyAskedQuestions: JSON.stringify([{ question: '', answer: '' }]),
+        sourcesAndReferences: JSON.stringify({ sourceName: '', sourceLink: '' }),
+        disclaimer: JSON.stringify({ description: '' }),
+        listCategory: JSON.stringify([]),
+        bannerImage: null,
+        cardImage: null
+      });
     } catch (err: any) {
-      alert(err.message || 'Failed to save schemes');
+      loadingAlert.close();
+      await showError(err.message || 'Failed to create scheme');
+    }
+  };
+
+  const renderFormField = (field: FormField) => {
+    switch (field.type) {
+      case 'text':
+        return (
+          <Input
+            value={formData[field.key] || ''}
+            onChange={(e) => handleFormChange(field.key, e.target.value)}
+            placeholder={`Enter ${field.label.toLowerCase()}`}
+            required={field.required}
+          />
+        );
+      case 'textarea':
+        return (
+          <TextArea
+            rows={3}
+            value={formData[field.key] || ''}
+            onChange={(v) => handleFormChange(field.key, v)}
+            placeholder={`Enter ${field.label.toLowerCase()}`}
+            required={field.required}
+          />
+        );
+      case 'date':
+        return (
+          <Input
+            type="date"
+            value={formData[field.key] || ''}
+            onChange={(e) => handleFormChange(field.key, e.target.value)}
+            required={field.required}
+          />
+        );
+      case 'select':
+        return (
+          <Select
+            options={field.options || []}
+            value={formData[field.key] || ''}
+            onChange={(v) => handleFormChange(field.key, v)}
+            placeholder={`Select ${field.label.toLowerCase()}`}
+            required={field.required}
+          />
+        );
+      case 'multi-select':
+        return (
+          <Select
+            isMulti
+            options={field.options || []}
+            value={formData[field.key] || []}
+            onChange={(v) => handleFormChange(field.key, v)}
+            placeholder={`Select ${field.label.toLowerCase()}`}
+            required={field.required}
+          />
+        );
+      case 'json':
+        return (
+          <TextArea
+            rows={3}
+            value={formData[field.key] || ''}
+            onChange={(v) => handleFormChange(field.key, v)}
+            placeholder={`Enter ${field.label} as JSON`}
+          />
+        );
+      case 'file':
+        return (
+          <input
+            type="file"
+            accept="image/*"
+            onChange={(e) => handleFileChange(field.key, e.target.files?.[0] || null)}
+            className="block w-full text-sm text-gray-500
+              file:mr-4 file:py-2 file:px-4
+              file:rounded-md file:border-0
+              file:text-sm file:font-semibold
+              file:bg-brand-50 file:text-brand-700
+              hover:file:bg-brand-100"
+          />
+        );
+      default:
+        return null;
     }
   };
 
@@ -254,19 +409,21 @@ const SchemePage = () => {
             <div>
               <Label>Filter by State</Label>
               <Select
-                options={INDIAN_STATES}
+                options={states.map(state => ({ value: state._id, label: state.name }))}
                 value={selectedState}
                 onChange={setSelectedState}
                 placeholder="Select state"
+                isLoading={loading && states.length === 0}
               />
             </div>
             <div>
               <Label>Filter by Category</Label>
               <Select
-                options={CATEGORY_OPTIONS}
+                options={categories.map(cat => ({ value: cat._id, label: cat.name }))}
                 value={selectedCategory}
                 onChange={setSelectedCategory}
                 placeholder="Select category"
+                isLoading={loading && categories.length === 0}
               />
             </div>
             <div className="flex items-end">
@@ -319,7 +476,7 @@ const SchemePage = () => {
                             {scheme.category}
                           </span>
                           <span className="text-xs px-2 py-1 bg-gray-100 rounded-md">
-                            {scheme.state.map(s => s.name).join(', ')}
+                            {/* {scheme.state.map(s => s.name).join(', ')} */}
                           </span>
                           <span className="text-xs px-2 py-1 bg-gray-100 rounded-md">
                             Published: {new Date(scheme.publishedOn).toLocaleDateString()}
@@ -334,97 +491,31 @@ const SchemePage = () => {
           </div>
         </>
       ) : (
-        <form onSubmit={handleSubmit}>
-          {schemes.map((scheme) => (
-            <div key={scheme.id} className="bg-white rounded-2xl border border-gray-200 p-6 mb-6">
-              <div className="flex items-center justify-between mb-5">
-                <h2 className="text-lg font-semibold">Scheme #{scheme.id}</h2>
-                <button
-                  type="button"
-                  onClick={() => deleteScheme(scheme.id)}
-                  className="text-red-500 hover:text-red-600"
-                  title="Delete Scheme"
-                >
-                  <TrashIcon className="h-5 w-5" />
-                </button>
+        <form onSubmit={handleSubmit} className="bg-white rounded-2xl border border-gray-200 p-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {formFields.map((field) => (
+              <div key={field.key} className={field.type === 'textarea' || field.type === 'json' ? 'md:col-span-2' : ''}>
+                <Label>{field.label}{field.required && '*'}</Label>
+                {renderFormField(field)}
               </div>
+            ))}
+          </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <Label>Scheme Name</Label>
-                  <Input
-                    value={scheme.name}
-                    onChange={(e) => handleChange(scheme.id, 'name', e.target.value)}
-                    placeholder="e.g., PM Kisan Samman Nidhi"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <Label>Status</Label>
-                  <Select
-                    options={[
-                      { value: 'active', label: 'Active' },
-                      { value: 'inactive', label: 'Inactive' },
-                      { value: 'draft', label: 'Draft' },
-                    ]}
-                    value={scheme.status}
-                    onChange={(v) => handleChange(scheme.id, 'status', v as SchemeStatus)}
-                  />
-                </div>
-
-                <div>
-                  <Label>Category</Label>
-                  <Select
-                    options={CATEGORY_OPTIONS}
-                    value={scheme.category}
-                    onChange={(v) => handleChange(scheme.id, 'category', v)}
-                    placeholder="Select category"
-                  />
-                </div>
-
-                <div>
-                  <Label>State</Label>
-                  <Select
-                    options={INDIAN_STATES}
-                    value={scheme.state}
-                    onChange={(v) => handleChange(scheme.id, 'state', v)}
-                    placeholder="Select state"
-                  />
-                </div>
-
-                {/* Add all other form fields similarly */}
-              </div>
-
-              <div className="mt-6">
-                <Label>Description</Label>
-                <TextArea
-                  rows={4}
-                  value={scheme.description}
-                  onChange={(v) => handleChange(scheme.id, 'description', v)}
-                  placeholder="Describe the scheme's purpose and overview"
-                />
-              </div>
-
-              <div className="flex justify-between mt-6">
-                <button
-                  type="button"
-                  onClick={addScheme}
-                  className="flex items-center px-4 py-2 bg-brand-500 text-white rounded-md hover:bg-brand-600"
-                >
-                  <PlusIcon className="h-5 w-5 mr-2" />
-                  Add Another Scheme
-                </button>
-
-                <button
-                  type="submit"
-                  className="px-6 py-2 bg-success-500 text-white rounded-md hover:bg-success-600"
-                >
-                  Save All Schemes
-                </button>
-              </div>
-            </div>
-          ))}
+          <div className="flex justify-end mt-6">
+            <button
+              type="button"
+              className="px-6 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 mr-4"
+              onClick={() => setIsAddMode(false)}
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="px-6 py-2 bg-success-500 text-white rounded-md hover:bg-success-600"
+            >
+              Create Scheme
+            </button>
+          </div>
         </form>
       )}
 

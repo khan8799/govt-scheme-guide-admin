@@ -1,47 +1,111 @@
-// src/app/categories/page.tsx
+// src/app/states/page.tsx
 'use client';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { PlusIcon, TrashIcon, PencilIcon } from '@heroicons/react/24/outline';
 import Label from '@/components/form/Label';
 import Input from '@/components/form/input/InputField';
 import TextArea from '@/components/form/input/TextArea';
 import Image from 'next/image';
-import useCategories from '@/hooks/useCategories';
-import { CategoryItem, CategoryListItem } from '@/app/types/category';
-import { createCategory, deleteCategory, updateCategory } from '@/app/service/categoryService';
 import { showConfirmation, showSuccess, showError, showLoading } from '@/components/SweetAlert';
 
-const CategoryPage = () => {
-  const { categories, loading, error, refreshCategories } = useCategories();
-  const [category, setCategory] = useState<CategoryItem>({ 
+interface StateApiResponse {
+  _id: string;
+  name: string;
+  image: string | null;
+  totalSchemes: number;
+}
+
+interface StateItem {
+  id: string;
+  name: string;
+  description?: string;
+  iconFile?: File | null;
+  existingImage?: string | null;
+}
+
+interface StateListItem {
+  id: string;
+  name: string;
+  image: string | null;
+  totalSchemes: number;
+}
+
+const API_TOKEN = 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY4OGZiYjFhYzRhOWNhZTU0MGYzOTZmYSIsInJvbGUiOiIiLCJpYXQiOjE3NTQ4MTgxNjYsImV4cCI6MTc1NDkwNDU2Nn0.IEXBWP4VUWyIgfeAKqpr78jK07mQvxYMEt2aWlCxeHU';
+const API_BASE_URL = 'https://govt-scheme-guide-api.onrender.com/api';
+
+const StatePage = () => {
+  const [states, setStates] = useState<StateListItem[]>([]);
+  const [state, setState] = useState<StateItem>({ 
     id: '', 
     name: '', 
     description: '', 
     iconFile: null,
-    existingImage: ''
+    existingImage: null
   });
   const [isAddMode, setIsAddMode] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Fetch statesfSchemes
+  const loadStates = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await fetch(`${API_BASE_URL}/user/getAllStates`);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      
+      if (!data.data || !Array.isArray(data.data)) {
+        throw new Error('Invalid data format received from API');
+      }
+      
+      setStates(
+        data.data.map((item: StateApiResponse) => ({
+          id: item._id,
+          name: item.name || "Untitled",
+          image: item.image,
+          totalSchemes: item.totalSchemes || 0
+        }))
+      );
+    } catch (e: unknown) {
+      if (e instanceof Error) {
+        setError(e.message);
+      } else {
+        setError("Failed to load states");
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadStates();
+  }, []);
 
   const resetForm = () => {
-    setCategory({ 
+    setState({ 
       id: '', 
       name: '', 
       description: '', 
       iconFile: null,
-      existingImage: ''
+      existingImage: null
     });
   };
 
-  const handleChange = (field: keyof CategoryItem, value: string | File | null) => {
-    setCategory(prev => ({ ...prev, [field]: value }));
+  const handleChange = (field: keyof StateItem, value: string | File | null) => {
+    setState(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleEdit = (item: CategoryListItem) => {
-    setCategory({
+  const handleEdit = (item: StateListItem) => {
+    setState({
       id: item.id,
       name: item.name,
-      description: item.description || '',
+      description: '',
       iconFile: null,
       existingImage: item.image
     });
@@ -51,20 +115,31 @@ const CategoryPage = () => {
 
   const handleDelete = async (id: string) => {
     const result = await showConfirmation({
-      title: 'Delete Category?',
-      text: 'Are you sure you want to delete this category? This action cannot be undone.',
+      title: 'Delete State?',
+      text: 'Are you sure you want to delete this state? This action cannot be undone.',
     });
 
     if (result.isConfirmed) {
-      const loadingAlert = showLoading('Deleting category...');
+      const loadingAlert = showLoading('Deleting state...');
       try {
-        await deleteCategory(id);
+        const response = await fetch(`${API_BASE_URL}/admin/deleteStateById/${id}`, {
+          method: 'DELETE',
+          headers: {
+            'Authorization': API_TOKEN,
+          },
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Failed to delete state');
+        }
+        
         loadingAlert.close();
-        await showSuccess('Category deleted successfully!');
-        refreshCategories();
+        await showSuccess('State deleted successfully!');
+        loadStates();
       } catch (err) {
         loadingAlert.close();
-        const message = err instanceof Error ? err.message : 'Error deleting category';
+        const message = err instanceof Error ? err.message : 'Error deleting state';
         await showError(message);
       }
     }
@@ -72,31 +147,42 @@ const CategoryPage = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const loadingAlert = showLoading(isEditMode ? 'Saving changes...' : 'Creating category...');
+    const loadingAlert = showLoading(isEditMode ? 'Saving changes...' : 'Creating state...');
     
     try {
       const formData = new FormData();
-      formData.append('name', category.name);
-      if (category.description) formData.append('description', category.description);
-      if (category.iconFile) formData.append('image', category.iconFile);
-      formData.append('createdBy', '688fbefc8dedecbaf5289c98');
-      formData.append('updatedBy', '688fbefc8dedecbaf5289c98');
+      formData.append('name', state.name);
+      if (state.description) formData.append('description', state.description);
+      if (state.iconFile) formData.append('image', state.iconFile);
 
-      if (isEditMode) {
-        await updateCategory(category.id, formData);
-      } else {
-        await createCategory(formData);
+      const url = isEditMode 
+        ? `${API_BASE_URL}/admin/updateStateById/${state.id}`
+        : `${API_BASE_URL}/admin/createState`;
+
+      const method = isEditMode ? 'PUT' : 'POST';
+
+      const response = await fetch(url, {
+        method,
+        headers: {
+          'Authorization': API_TOKEN,
+        },
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || `Failed to ${isEditMode ? 'update' : 'save'} state`);
       }
       
       loadingAlert.close();
-      await showSuccess(`Category ${isEditMode ? 'updated' : 'created'} successfully!`);
+      await showSuccess(`State ${isEditMode ? 'updated' : 'created'} successfully!`);
       resetForm();
       setIsAddMode(false);
       setIsEditMode(false);
-      refreshCategories();
+      loadStates();
     } catch (err) {
       loadingAlert.close();
-      const message = err instanceof Error ? err.message : `Error ${isEditMode ? 'updating' : 'creating'} category`;
+      const message = err instanceof Error ? err.message : `Error ${isEditMode ? 'updating' : 'creating'} state`;
       await showError(message);
     }
   };
@@ -105,7 +191,7 @@ const CategoryPage = () => {
     <div className="p-6">
       {/* Header */}
       <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Categories</h1>
+        <h1 className="text-2xl font-bold">States</h1>
         <div className="flex gap-2">
           <button
             type="button"
@@ -128,7 +214,7 @@ const CategoryPage = () => {
                 resetForm();
               }}
             >
-              <PlusIcon className="h-4 w-4" /> Add Category
+              <PlusIcon className="h-4 w-4" /> Add State
             </button>
           )}
         </div>
@@ -138,14 +224,14 @@ const CategoryPage = () => {
       {!isAddMode && (
         <div className="rounded-2xl border border-gray-200 bg-white">
           {loading ? (
-            <div className="p-6 text-sm text-gray-600">Loading categories...</div>
+            <div className="p-6 text-sm text-gray-600">Loading states...</div>
           ) : error ? (
             <div className="p-6 text-sm text-red-600">{error}</div>
-          ) : categories.length === 0 ? (
-            <div className="p-6 text-sm text-gray-600">No categories found.</div>
+          ) : states.length === 0 ? (
+            <div className="p-6 text-sm text-gray-600">No states found.</div>
           ) : (
             <div className="divide-y divide-gray-200">
-              {categories.map((item) => (
+              {states.map((item) => (
                 <div key={item.id} className="flex items-center justify-between p-4">
                   <div className="flex items-center gap-4">
                     {item.image && (
@@ -160,9 +246,9 @@ const CategoryPage = () => {
                     )}
                     <div>
                       <p className="font-medium">{item.name}</p>
-                      <p className="text-sm text-gray-500">
+                      {/* <p className="text-sm text-gray-500">
                         Schemes: {item.totalSchemes}
-                      </p>
+                      </p> */}
                     </div>
                   </div>
                   <div className="flex gap-2">
@@ -188,28 +274,28 @@ const CategoryPage = () => {
         </div>
       )}
 
-      {/* Add/Edit Mode - Category Form */}
+      {/* Add/Edit Mode - State Form */}
       {(isAddMode || isEditMode) && (
         <form onSubmit={handleSubmit}>
           <div className="bg-white rounded-2xl border border-gray-200 p-6 mb-6 relative">
             <div className="grid grid-cols-1 gap-6">
               <div>
-                <Label>Category Name</Label>
+                <Label>State Name</Label>
                 <Input
-                  value={category.name}
+                  value={state.name}
                   onChange={(e) => handleChange('name', e.target.value)}
-                  placeholder="e.g., Education"
+                  placeholder="e.g., California"
                   required
                 />
               </div>
 
               <div>
-                <Label>Category Image</Label>
-                {category.existingImage && (
+                <Label>State Image</Label>
+                {state.existingImage && (
                   <div className="mb-2">
                     <Image
-                      src={category.existingImage}
-                      alt="Current category image"
+                      src={state.existingImage}
+                      alt="Current state image"
                       width={100}
                       height={100}
                       className="object-cover rounded"
@@ -231,9 +317,9 @@ const CategoryPage = () => {
                 <Label>Description (Optional)</Label>
                 <TextArea
                   rows={3}
-                  value={category.description || ''}
+                  value={state.description || ''}
                   onChange={(v) => handleChange('description', v)}
-                  placeholder="Explain what this category covers"
+                  placeholder="Explain about this state"
                 />
               </div>
             </div>
@@ -254,7 +340,7 @@ const CategoryPage = () => {
                 type="submit"
                 className="px-6 py-2 bg-success-500 text-white rounded-md hover:bg-success-600"
               >
-                {isEditMode ? 'Update' : 'Save'} Category
+                {isEditMode ? 'Update' : 'Save'} State
               </button>
             </div>
           </div>
@@ -264,4 +350,4 @@ const CategoryPage = () => {
   );
 };
 
-export default CategoryPage;
+export default StatePage;
