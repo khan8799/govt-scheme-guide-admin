@@ -5,7 +5,7 @@ import { EyeCloseIcon, EyeIcon } from "@/icons";
 import Link from "next/link";
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
-import { registerUser } from "@/app/service/authservice";
+import { registerUser } from "@/app/service/authService";
 
 export default function SignUpForm() {
   const router = useRouter();

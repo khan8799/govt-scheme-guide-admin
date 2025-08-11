@@ -10,18 +10,30 @@ export const API_PATHS = {
   registerScheme: "/api/registerScheme",
 };
 
-function getAuthHeaders() {
+export function getAuthHeaders(): Record<string, string> {
   const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
-  return token ? { Authorization: `Bearer ${token}` } : {};
+  if (!token) return {};
+  const value = token.startsWith('Bearer ') ? token : `Bearer ${token}`;
+  return { Authorization: value };
 }
 
 export async function fetchJson<T>(path: string, init?: RequestInit): Promise<T> {
+  // Build headers in a type-safe way to satisfy HeadersInit
+  let headers: HeadersInit;
+  const authHeaders = getAuthHeaders();
+  if (init?.headers instanceof Headers) {
+    const h = new Headers(init.headers);
+    Object.entries(authHeaders).forEach(([k, v]) => h.set(k, v));
+    headers = h;
+  } else if (Array.isArray(init?.headers)) {
+    headers = [...init!.headers, ...Object.entries(authHeaders)];
+  } else {
+    headers = { ...(init?.headers as Record<string, string> | undefined), ...authHeaders };
+  }
+
   const res = await fetch(`${API_BASE_URL}${path}`, {
     ...init,
-    headers: {
-      ...(init?.headers || {}),
-      ...getAuthHeaders(),
-    },
+    headers,
     cache: "no-store",
   });
   if (!res.ok) {

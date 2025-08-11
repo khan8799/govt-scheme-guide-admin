@@ -5,7 +5,7 @@ import { EyeCloseIcon, EyeIcon } from "@/icons";
 import Link from "next/link";
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
-import { loginUser } from "@/app/service/authservice";
+import { loginUser } from "@/app/service/authService";
 
 export default function SignInForm() {
   const router = useRouter();
@@ -26,7 +26,18 @@ export default function SignInForm() {
   try {
     setSubmitting(true);
     const { data } = await loginUser(form);
-    alert("Login successful");
+    try {
+      if (data?.token) {
+        // Store token with Bearer prefix for Authorization header usage
+        localStorage.setItem("token", `Bearer ${data.token}`);
+      }
+      if (data?.user) {
+        localStorage.setItem("user", JSON.stringify(data.user));
+      }
+    } catch (storageErr) {
+      // ignore storage errors but continue navigation
+    }
+    alert(data?.message || "Login successful");
     router.push("/");
   } catch (err: any) {
     setMessage(err.message || err.response?.data?.message || "Login failed");

@@ -7,7 +7,8 @@ import Select from '@/components/form/Select';
 import TextArea from '@/components/form/input/TextArea';
 import Image from 'next/image';
 import { showConfirmation, showSuccess, showError, showLoading } from '@/components/SweetAlert';
-import { API_BASE_URL, DEFAULT_AUTH_TOKEN } from '@/config/confiq';
+import { API_BASE_URL } from '@/config/confiq';
+import { getAuthHeaders } from '@/config/api';
 
 interface Scheme {
   _id: string;
@@ -56,6 +57,8 @@ interface FormField {
 
 
 const SchemePage = () => {
+  const getErrorMessage = (e: unknown, fallback: string) =>
+    e instanceof Error ? e.message : fallback;
   const [isAddMode, setIsAddMode] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -132,16 +135,13 @@ const SchemePage = () => {
     const loadInitialData = async () => {
       setLoading(true);
       try {
+        const authHeaders = getAuthHeaders();
         const [statesRes, categoriesRes] = await Promise.all([
           fetch(`${API_BASE_URL}/user/getAllStates`, {
-            headers: {
-              'Authorization': DEFAULT_AUTH_TOKEN
-            }
+            headers: authHeaders as HeadersInit
           }),
           fetch(`${API_BASE_URL}/user/allCategories`, {
-            headers: {
-              'Authorization': DEFAULT_AUTH_TOKEN
-            }
+            headers: authHeaders as HeadersInit
           })
         ]);
 
@@ -154,7 +154,7 @@ const SchemePage = () => {
         setStates(statesData.data || []);
         setCategories(categoriesData.data || []);
       } catch (e: unknown) {
-        setError(e.message || 'Failed to load initial data');
+        setError(getErrorMessage(e, 'Failed to load initial data'));
       } finally {
         setLoading(false);
       }
@@ -178,18 +178,15 @@ const SchemePage = () => {
           url = `${API_BASE_URL}/user/getSchemesByCategory`;
         }
 
-        const res = await fetch(url, {
-          headers: {
-            'Authorization': DEFAULT_AUTH_TOKEN
-          }
-        });
+        const authHeaders2 = getAuthHeaders();
+        const res = await fetch(url, { headers: authHeaders2 as HeadersInit });
 
         if (!res.ok) throw new Error('Failed to load schemes');
         
         const data = await res.json();
         setFilteredSchemes(data.data || data);
       } catch (e: unknown) {
-        setError(e.message || 'Failed to load schemes');
+        setError(getErrorMessage(e, 'Failed to load schemes'));
       } finally {
         setLoading(false);
       }
@@ -200,11 +197,8 @@ const SchemePage = () => {
   const fetchSchemeDetails = async (id: string) => {
     const loadingAlert = showLoading('Loading scheme details...');
     try {
-      const res = await fetch(`${API_BASE_URL}/user/getSchemeById/${id}`, {
-        headers: {
-          'Authorization': DEFAULT_AUTH_TOKEN
-        }
-      });
+      const authHeaders3 = getAuthHeaders();
+      const res = await fetch(`${API_BASE_URL}/user/getSchemeById/${id}`, { headers: authHeaders3 as HeadersInit });
       
       if (!res.ok) throw new Error('Failed to load scheme details');
       
@@ -213,7 +207,7 @@ const SchemePage = () => {
       loadingAlert.close();
     } catch (e: unknown) {
       loadingAlert.close();
-      await showError(e.message || 'Failed to load scheme details');
+      await showError(getErrorMessage(e, 'Failed to load scheme details'));
     }
   };
 
@@ -223,11 +217,11 @@ const SchemePage = () => {
   };
 
   const handleFormChange = (key: string, value: unknown) => {
-    setFormData(prev => ({ ...prev, [key]: value }));
+    setFormData((prev: Record<string, any>) => ({ ...prev, [key]: value }));
   };
 
   const handleFileChange = (key: string, file: File | null) => {
-    setFormData(prev => ({ ...prev, [key]: file }));
+    setFormData((prev: Record<string, any>) => ({ ...prev, [key]: file }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -236,31 +230,69 @@ const SchemePage = () => {
     
     try {
       const data = new FormData();
-      
-      // Add all form fields to FormData
-      Object.keys(formData).forEach(key => {
-        if (key === 'bannerImage' || key === 'cardImage') {
-          if (formData[key]) {
-            data.append(key, formData[key]);
-          }
-        } else if (key === 'state') {
-          formData.state.forEach((state: string) => data.append('state[]', state));
-        } else {
-          data.append(key, formData[key]);
-        }
-      });
 
+      // Validate and append JSON fields
+      const jsonFields = [
+        'keyHighlightsOfTheScheme',
+        'eligibilityCriteria',
+        'financialBenefits',
+        'requiredDocuments',
+        'importantDates',
+        'salientFeatures',
+        'applicationProcess',
+        'helplineNumber',
+        'frequentlyAskedQuestions',
+        'sourcesAndReferences',
+        'disclaimer',
+        'listCategory',
+      ];
+
+      for (const key of jsonFields) {
+        const raw = formData[key] ?? '';
+        try {
+          const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
+          data.append(key, JSON.stringify(parsed));
+        } catch (err) {
+          throw new Error(`Invalid JSON in field: ${key}`);
+        }
+      }
+
+      // Primitive text/date fields
+      data.append('schemeTitle', String(formData.schemeTitle || ''));
+      data.append('publishedOn', String(formData.publishedOn || ''));
+      data.append('about', String(formData.about || ''));
+      data.append('objectives', String(formData.objectives || ''));
+
+      // Category id (send as JSON string to match backend parser)
+      const categoryId = typeof formData.category === 'string'
+        ? formData.category
+        : formData.category?.value || formData.category?._id || '';
+      if (categoryId) data.append('category', JSON.stringify(categoryId));
+
+      // States as a single JSON array
+      const stateIds: string[] = (formData.state || [])
+        .map((s: any) => (typeof s === 'string' ? s : s?.value || s?._id))
+        .filter(Boolean);
+      data.append('state', JSON.stringify(stateIds));
+
+      // Files
+      if (formData.bannerImage) data.append('bannerImage', formData.bannerImage);
+      if (formData.cardImage) data.append('cardImage', formData.cardImage);
+
+      const authHeaders4 = getAuthHeaders();
       const res = await fetch(`${API_BASE_URL}/admin/registerScheme`, {
         method: 'POST',
-        headers: {
-          'Authorization': DEFAULT_AUTH_TOKEN
-        },
+        headers: authHeaders4 as HeadersInit,
         body: data
       });
 
       if (!res.ok) {
-        const errorData = await res.json();
-        throw new Error(errorData.message || 'Failed to create scheme');
+        let message = 'Failed to create scheme';
+        try {
+          const errorData = await res.json();
+          message = errorData.message || message;
+        } catch {}
+        throw new Error(message);
       }
 
       loadingAlert.close();
@@ -318,7 +350,6 @@ const SchemePage = () => {
             value={formData[field.key] || ''}
             onChange={(v) => handleFormChange(field.key, v)}
             placeholder={`Enter ${field.label.toLowerCase()}`}
-            required={field.required}
           />
         );
       case 'date':
@@ -411,9 +442,8 @@ const SchemePage = () => {
               <Select
                 options={states.map(state => ({ value: state._id, label: state.name }))}
                 value={selectedState}
-                onChange={setSelectedState}
+                onChange={(v) => setSelectedState(String(v))}
                 placeholder="Select state"
-                isLoading={loading && states.length === 0}
               />
             </div>
             <div>
@@ -421,9 +451,8 @@ const SchemePage = () => {
               <Select
                 options={categories.map(cat => ({ value: cat._id, label: cat.name }))}
                 value={selectedCategory}
-                onChange={setSelectedCategory}
+                onChange={(v) => setSelectedCategory(String(v))}
                 placeholder="Select category"
-                isLoading={loading && categories.length === 0}
               />
             </div>
             <div className="flex items-end">
