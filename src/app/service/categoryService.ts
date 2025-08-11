@@ -1,5 +1,5 @@
 // src/services/categoryService.ts
-import { DEFAULT_AUTH_TOKEN } from '@/config/confiq';
+import { getAuthHeaders } from '@/config/api';
 import { CategoryApiResponse, CategoryListItem } from '../types/category';
 import apiClient from './apiClient'; // Make sure this import path is correct
 
@@ -34,22 +34,25 @@ export const fetchCategories = async (token?: string): Promise<CategoryListItem[
 
 export const createCategory = async (
   formData: FormData,
-  token: string = DEFAULT_AUTH_TOKEN
+  token?: string
 ): Promise<void> => {
-  await apiClient.post('admin/registerCategory', formData, token);
+  const authToken = token || (getAuthHeaders().Authorization ?? '');
+  await apiClient.post('admin/registerCategory', formData, authToken);
 };
 
 export const updateCategory = async (
   id: string,
   formData: FormData,
-  token: string = DEFAULT_AUTH_TOKEN
+  token?: string
 ): Promise<void> => {
-  await apiClient.put(`admin/updateCategoryById/${id}`, formData, token);
+  const authToken = token || (getAuthHeaders().Authorization ?? '');
+  await apiClient.put(`admin/updateCategoryById/${id}`, formData, authToken);
 };
 
 export const deleteCategory = async (
   id: string,
-  token: string = DEFAULT_AUTH_TOKEN
+  token?: string
 ): Promise<void> => {
-  await apiClient.delete(`admin/deleteCategoryById/${id}`, token);
+  const authToken = token || (getAuthHeaders().Authorization ?? '');
+  await apiClient.delete(`admin/deleteCategoryById/${id}`, authToken);
 };

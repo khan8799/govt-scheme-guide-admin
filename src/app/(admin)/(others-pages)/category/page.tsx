@@ -76,11 +76,21 @@ const CategoryPage = () => {
     
     try {
       const formData = new FormData();
+      let userId = '';
+      try {
+        const raw = typeof window !== 'undefined' ? localStorage.getItem('user') : null;
+        if (raw) {
+          const u = JSON.parse(raw);
+          userId = u?._id || u?.id || '';
+        }
+      } catch {}
       formData.append('name', category.name);
       if (category.description) formData.append('description', category.description);
       if (category.iconFile) formData.append('image', category.iconFile);
-      formData.append('createdBy', '688fbefc8dedecbaf5289c98');
-      formData.append('updatedBy', '688fbefc8dedecbaf5289c98');
+      if (userId) {
+        formData.append('createdBy', userId);
+        formData.append('updatedBy', userId);
+      }
 
       if (isEditMode) {
         await updateCategory(category.id, formData);

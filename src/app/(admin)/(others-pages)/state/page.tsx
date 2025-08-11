@@ -1,4 +1,3 @@
-// src/app/states/page.tsx
 'use client';
 import { useEffect, useState } from 'react';
 import { PlusIcon, TrashIcon, PencilIcon } from '@heroicons/react/24/outline';
@@ -7,6 +6,7 @@ import Input from '@/components/form/input/InputField';
 import TextArea from '@/components/form/input/TextArea';
 import Image from 'next/image';
 import { showConfirmation, showSuccess, showError, showLoading } from '@/components/SweetAlert';
+import { getAuthHeaders } from '@/config/api';
 
 interface StateApiResponse {
   _id: string;
@@ -30,7 +30,6 @@ interface StateListItem {
   totalSchemes: number;
 }
 
-const API_TOKEN = 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY4OGZiYjFhYzRhOWNhZTU0MGYzOTZmYSIsInJvbGUiOiIiLCJpYXQiOjE3NTQ4MTgxNjYsImV4cCI6MTc1NDkwNDU2Nn0.IEXBWP4VUWyIgfeAKqpr78jK07mQvxYMEt2aWlCxeHU';
 const API_BASE_URL = 'https://govt-scheme-guide-api.onrender.com/api';
 
 const StatePage = () => {
@@ -122,11 +121,9 @@ const StatePage = () => {
     if (result.isConfirmed) {
       const loadingAlert = showLoading('Deleting state...');
       try {
-        const response = await fetch(`${API_BASE_URL}/admin/deleteStateById/${id}`, {
+      const response = await fetch(`${API_BASE_URL}/admin/deleteStateById/${id}`, {
           method: 'DELETE',
-          headers: {
-            'Authorization': API_TOKEN,
-          },
+        headers: getAuthHeaders() as HeadersInit,
         });
 
         if (!response.ok) {
@@ -163,9 +160,7 @@ const StatePage = () => {
 
       const response = await fetch(url, {
         method,
-        headers: {
-          'Authorization': API_TOKEN,
-        },
+        headers: getAuthHeaders() as HeadersInit,
         body: formData,
       });
 
