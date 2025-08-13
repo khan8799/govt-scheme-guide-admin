@@ -1,6 +1,6 @@
 // src/services/apiClient.ts
 
-import { API_BASE_URL } from "@/config/confiq";
+import { API_BASE_URL } from "@/config/api";
 
 const apiClient = {
   get: async <T>(endpoint: string, token?: string): Promise<T> => {

@@ -1,18 +1,20 @@
-export const API_BASE_URL = "https://govt-scheme-guide-api.onrender.com";
+export const API_BASE_URL = "https://govt-scheme-guide-api.onrender.com/api";
 
 export const API_PATHS = {
-  registerUser: "/api/registerUser",
-  loginUser: "/api/loginUser",
-  allUsers: "/api/allUsers",
-  categoriesWithSchemeCount: "/api/categoriesWithSchemeCount",
-  getAllSchemes: "/api/getAllSchemes",
-  registerCategory: "/api/registerCategory",
-  registerScheme: "/api/registerScheme",
+  registerUser: "/registerUser",
+  loginUser: "/loginUser",
+  allUsers: "/allUsers",
+  categoriesWithSchemeCount: "/categoriesWithSchemeCount",
+  getAllSchemes: "/getAllSchemes",
+  registerCategory: "/registerCategory",
+  registerScheme: "/registerScheme",
 };
 
 export function getAuthHeaders(): Record<string, string> {
   const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
-  if (!token) return {};
+  if (!token) {
+    return {};
+  }
   const value = token.startsWith('Bearer ') ? token : `Bearer ${token}`;
   return { Authorization: value };
 }
