@@ -1,7 +1,7 @@
 "use client";
 import Avatar from "@/components/ui/avatar/Avatar";
 import { DEFAULT_USER_AVATAR } from "@/config/media";
-import Link from "next/link";
+// import Link from "next/link";
 import React, { useEffect, useState } from "react";
 import { API_BASE_URL, API_PATHS } from "@/config/api";
 import { Dropdown } from "../ui/dropdown/Dropdown";

@@ -34,11 +34,12 @@ const handleRegister = async (e: React.FormEvent<HTMLFormElement>) => {
 
   try {
     setSubmitting(true);
-    const { data } = await registerUser(form);
+    await registerUser(form);
     alert("Registration successful, please login");
     router.push("/signin");
-  } catch (err: any) {
-    setMessage(err.response?.data?.message || err.message || "Registration failed");
+  } catch (e: unknown) {
+    const maybe = e as { message?: string; response?: { data?: { message?: string } } };
+    setMessage(maybe?.response?.data?.message || maybe?.message || "Registration failed");
   } finally {
     setSubmitting(false);
   }

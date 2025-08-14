@@ -23,10 +23,10 @@ export default function SignInForm() {
     return;
   }
 
-  try {
+    try {
     setSubmitting(true);
     const { data } = await loginUser(form);
-    try {
+      try {
       if (data?.token) {
         // Store token with Bearer prefix for Authorization header usage
         localStorage.setItem("token", `Bearer ${data.token}`);
@@ -34,13 +34,14 @@ export default function SignInForm() {
       if (data?.user) {
         localStorage.setItem("user", JSON.stringify(data.user));
       }
-    } catch (storageErr) {
-      // ignore storage errors but continue navigation
-    }
+      } catch {
+        // ignore storage errors but continue navigation
+      }
     alert(data?.message || "Login successful");
     router.push("/");
-  } catch (err: any) {
-    setMessage(err.message || err.response?.data?.message || "Login failed");
+  } catch (e: unknown) {
+    const maybe = e as { message?: string; response?: { data?: { message?: string } } };
+    setMessage(maybe?.response?.data?.message || maybe?.message || "Login failed");
   } finally {
     setSubmitting(false);
   }
