@@ -6,6 +6,9 @@ import Input from '@/components/form/input/InputField';
 import Select from '@/components/form/Select';
 import TextArea from '@/components/form/input/TextArea';
 import Image from 'next/image';
+import FilterBar from '@/components/schemes/FilterBar';
+import SchemeList from '@/components/schemes/SchemeList';
+import SchemeForm from '@/components/schemes/SchemeForm';
 import { showSuccess, showError, showLoading } from '@/components/SweetAlert';
 import { API_BASE_URL } from '@/config/api';
 import { getAuthHeaders } from '@/config/api';
@@ -919,40 +922,16 @@ const SchemePage = () => {
 
       {!isAddMode ? (
         <>
-          <div className="mb-6 grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <Label>Filter by State</Label>
-              <Select
-                options={states.map(state => ({ value: state._id, label: state.name }))}
-                value={selectedState}
-                onChange={(v) => setSelectedState(String(v))}
-                placeholder="Select state"
-              />
-            </div>
-            <div>
-              <Label>Filter by Category</Label>
-              <Select
-                options={categories.map(cat => ({ value: cat._id, label: cat.name }))}
-                value={selectedCategory}
-                onChange={(v) => setSelectedCategory(String(v))}
-                placeholder="Select category"
-              />
-            </div>
-            <div className="flex items-end gap-2">
-              <button
-                onClick={resetFilters}
-                className="px-4 py-2 bg-gray-200 rounded-md hover:bg-gray-300"
-              >
-                Reset Filters
-              </button>
-              <button
-                onClick={() => loadSchemes(1, false)}
-                className="px-4 py-2 bg-blue-200 rounded-md hover:bg-blue-300"
-              >
-                Refresh
-              </button>
-            </div>
-          </div>
+          <FilterBar
+            states={states}
+            categories={categories}
+            selectedState={selectedState}
+            selectedCategory={selectedCategory}
+            onChangeState={(id) => setSelectedState(id)}
+            onChangeCategory={(id) => setSelectedCategory(id)}
+            onReset={resetFilters}
+            onRefresh={() => loadSchemes(1, false)}
+          />
 
           <div className="rounded-2xl border border-gray-200 bg-white">
             {/* Summary */}
@@ -998,56 +977,9 @@ const SchemePage = () => {
                 )}
               </div>
             ) : (
-              <div className="divide-y divide-gray-200">
-                {filteredSchemes.map((scheme) => (
-                  <div key={scheme._id} className="p-4 hover:bg-gray-50 cursor-pointer">
-                    <div className="flex items-start gap-4" onClick={() => fetchSchemeDetails(scheme._id)}>
-                      {scheme.cardImage && (
-                        <div className="w-24 h-24 flex-shrink-0 relative">
-                          <Image
-                            src={scheme.cardImage.url}
-                            alt={scheme.schemeTitle}
-                            fill
-                            className="object-cover rounded-lg"
-                            sizes="100px"
-                          />
-                        </div>
-                      )}
-                      <div className="flex-1">
-                        <div className="flex items-center justify-between">
-                          <h3 className="text-lg font-semibold">{scheme.schemeTitle}</h3>
-                          <span className={`px-2 py-1 text-xs rounded-full ${
-                            scheme.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                          }`}>
-                            {scheme.isActive ? 'Active' : 'Inactive'}
-                          </span>
-                        </div>
-                        <p className="mt-1 text-sm text-gray-500 line-clamp-2">
-                          {scheme.about}
-                        </p>
-                        <div className="mt-2 flex flex-wrap gap-2">
-                          {scheme.category && (
-                            <span className="text-xs px-2 py-1 bg-gray-100 rounded-md">
-                              {typeof scheme.category === 'string' ? scheme.category : scheme.category.name || 'Unknown Category'}
-                            </span>
-                          )}
-                          {scheme.state && scheme.state.length > 0 && (
-                            <span className="text-xs px-2 py-1 bg-gray-100 rounded-md">
-                              {scheme.state.map((s) => (typeof s === 'string' ? s : s.name)).join(', ')}
-                            </span>
-                          )}
-                          <span className="text-xs px-2 py-1 bg-gray-100 rounded-md">
-                            Published: {new Date(scheme.publishedOn).toLocaleDateString()}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
+              <SchemeList schemes={filteredSchemes} onSelect={fetchSchemeDetails} />
             )}
             
-            {/* Pagination Controls */}
             {filteredSchemes.length > 0 && (
               <div className="p-4 border-t border-gray-200">
                 <div className="flex items-center justify-between">
@@ -1077,7 +1009,7 @@ const SchemePage = () => {
                   )}
                 </div>
                 
-                {/* Action Buttons */}
+
                 <div className="mt-3 text-center space-y-2">
                   {hasMore && (
                     <button
@@ -1089,7 +1021,7 @@ const SchemePage = () => {
                     </button>
                   )}
                   
-                  {/* Load All Button */}
+
                   <div>
                     <button
                       onClick={async () => {
@@ -1152,40 +1084,30 @@ const SchemePage = () => {
           </div>
         </>
       ) : (
-        <form onSubmit={handleSubmit} className="bg-white rounded-2xl border border-gray-200 p-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {formFields.map((field) => (
-              <div key={field.key} className={field.type === 'textarea' || field.type === 'json' ? 'md:col-span-2' : ''}>
-                <Label>{field.label}{field.required && '*'}</Label>
-                {renderFormField(field)}
-              </div>
-            ))}
+        <div className="bg-white rounded-2xl border border-gray-200 p-6">
+          <div className="grid grid-cols-1 gap-6">
+            <SchemeForm
+              formFields={formFields}
+              formData={formData}
+              onChange={handleFormChange}
+              onFileChange={handleFileChange}
+              categoriesOptions={categories.map(cat => ({ value: cat._id, label: cat.name }))}
+              statesOptions={states.map(state => ({ value: state._id, label: state.name }))}
+              onSubmit={handleSubmit}
+            />
           </div>
-
           <div className="flex justify-end mt-6">
-
-            <button
-              type="button"
-              className="px-6 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 mr-4"
-              onClick={() => setIsAddMode(false)}
-            >
+            <button type="button" className="px-6 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 mr-4" onClick={() => setIsAddMode(false)}>
               Cancel
             </button>
-            <button
-              type="submit"
-              className="px-6 py-2 bg-success-500 text-white rounded-md hover:bg-success-600"
-            >
-              Create Scheme
-            </button>
           </div>
-        </form>
+        </div>
       )}
 
 {selectedScheme && (
   <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
     <div className="bg-white rounded-2xl max-w-5xl w-full max-h-[90vh] overflow-y-auto">
       <div className="p-6">
-        {/* Header */}
         <div className="flex justify-between items-start mb-4">
           <h2 className="text-2xl font-bold">{selectedScheme.schemeTitle}</h2>
           <button
@@ -1208,7 +1130,6 @@ const SchemePage = () => {
           </button>
         </div>
 
-        {/* Banner */}
         {selectedScheme.bannerImage && (
           <div className="mb-6 rounded-lg overflow-hidden relative h-48">
             <Image
@@ -1221,7 +1142,6 @@ const SchemePage = () => {
           </div>
         )}
 
-        {/* About & Objectives */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
             <h3 className="font-semibold mb-2">About</h3>
@@ -1233,7 +1153,6 @@ const SchemePage = () => {
           </div>
         </div>
 
-        {/* Key Highlights */}
         {selectedScheme.keyHighlightsOfTheScheme?.length > 0 && (
           <Section title="Key Highlights">
             <ul className="list-disc pl-5 space-y-1">
@@ -1246,7 +1165,6 @@ const SchemePage = () => {
           </Section>
         )}
 
-        {/* Eligibility Criteria */}
         {selectedScheme.eligibilityCriteria?.length > 0 && (
           <Section title="Eligibility Criteria">
             <ul className="list-disc pl-5 space-y-1">
@@ -1259,7 +1177,6 @@ const SchemePage = () => {
           </Section>
         )}
 
-        {/* Financial Benefits */}
         {selectedScheme.financialBenefits?.length > 0 && (
           <Section title="Financial Benefits">
             <ul className="list-disc pl-5 space-y-1">
@@ -1272,7 +1189,6 @@ const SchemePage = () => {
           </Section>
         )}
 
-        {/* Required Documents */}
         {selectedScheme.requiredDocuments?.length > 0 && (
           <Section title="Required Documents">
             <ul className="list-disc pl-5 space-y-1">
@@ -1285,7 +1201,6 @@ const SchemePage = () => {
           </Section>
         )}
 
-        {/* Important Dates */}
         {selectedScheme.importantDates?.length > 0 && (
           <Section title="Important Dates">
             <ul className="space-y-1">
@@ -1299,7 +1214,6 @@ const SchemePage = () => {
           </Section>
         )}
 
-        {/* Salient Features */}
         {selectedScheme.salientFeatures?.length > 0 && (
           <Section title="Salient Features">
             <ul className="list-disc pl-5 space-y-1">
@@ -1312,7 +1226,6 @@ const SchemePage = () => {
           </Section>
         )}
 
-        {/* Application Process */}
         {selectedScheme.applicationProcess?.length > 0 && (
           <Section title="Application Process">
             <ul className="list-disc pl-5 space-y-1">
@@ -1325,7 +1238,6 @@ const SchemePage = () => {
           </Section>
         )}
 
-        {/* Helpline Number */}
         {selectedScheme.helplineNumber && (
           <Section title="Helpline Number">
             <p>
@@ -1343,7 +1255,6 @@ const SchemePage = () => {
           </Section>
         )}
 
-        {/* FAQ */}
         {selectedScheme.frequentlyAskedQuestions?.length > 0 && (
           <Section title="Frequently Asked Questions">
             <ul className="space-y-2">
@@ -1358,7 +1269,6 @@ const SchemePage = () => {
           </Section>
         )}
 
-        {/* Sources */}
         {selectedScheme.sourcesAndReferences && (
           <Section title="Sources & References">
             <p>
@@ -1376,14 +1286,12 @@ const SchemePage = () => {
           </Section>
         )}
 
-        {/* Disclaimer */}
         {selectedScheme.disclaimer?.description && (
           <Section title="Disclaimer">
             <p>{selectedScheme.disclaimer.description}</p>
           </Section>
         )}
 
-        {/* Close Button */}
         <div className="mt-6 pt-6 border-t border-gray-200 text-right">
           <button
             onClick={() => setSelectedScheme(null)}
