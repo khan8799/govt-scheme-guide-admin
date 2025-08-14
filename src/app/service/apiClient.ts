@@ -19,7 +19,7 @@ const apiClient = {
     return response.json();
   },
 
-  post: async <T>(endpoint: string, body: any, token: string): Promise<T> => {
+  post: async <T>(endpoint: string, body: unknown, token: string): Promise<T> => {
     const headers: Record<string, string> = {
       'Authorization': token,
     };
@@ -41,7 +41,7 @@ const apiClient = {
     return response.json();
   },
 
-  put: async <T>(endpoint: string, body: any, token: string): Promise<T> => {
+  put: async <T>(endpoint: string, body: unknown, token: string): Promise<T> => {
     const headers: Record<string, string> = {
       'Authorization': token,
     };

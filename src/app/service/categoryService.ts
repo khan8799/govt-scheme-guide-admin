@@ -5,21 +5,21 @@ import apiClient from './apiClient'; // Make sure this import path is correct
 
 export const fetchCategories = async (token?: string): Promise<CategoryListItem[]> => {
   try {
-    const response = await apiClient.get<any>(
+    const response = await apiClient.get<unknown>(
       'user/getSchemesByCategory',
       token
     );
     const data = Array.isArray(response)
       ? response
-      : response?.data
-        ? response.data
+      : (response as { data?: unknown })?.data
+        ? (response as { data?: unknown }).data
         : [];
 
     if (!Array.isArray(data)) {
       throw new Error('Invalid data format received from API');
     }
 
-    return data.map((item: CategoryApiResponse) => ({
+    return (data as CategoryApiResponse[]).map((item) => ({
       id: item.categoryId || item._id || '',
       name: item.name || 'Untitled',
       image: item.image || '',

@@ -1,5 +1,5 @@
 'use client';
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { PlusIcon, TrashIcon } from '@heroicons/react/24/outline';
 import Label from '@/components/form/Label';
 import Input from '@/components/form/input/InputField';
@@ -9,48 +9,23 @@ import Image from 'next/image';
 import { showSuccess, showError, showLoading } from '@/components/SweetAlert';
 import { API_BASE_URL } from '@/config/api';
 import { getAuthHeaders } from '@/config/api';
-
-interface Scheme {
-  _id: string;
-  schemeTitle: string;
-  about: string;
-  category: string | { _id: string; name: string };
-  state: Array<{ _id: string; name: string }> | string[];
-  publishedOn: string;
-  objectives: string;
-  keyHighlightsOfTheScheme: Array<{ schemeName: string; launchedBy: string; _id: string }>;
-  eligibilityCriteria: Array<{ subTitle: string; subDescription: string; _id: string }>;
-  financialBenefits: Array<{ subTitle: string; subDescription: string; _id: string }>;
-  requiredDocuments: Array<{ subTitle: string; subDescription: string; _id: string }>;
-  importantDates: Array<{ label: string; date: string; _id: string }>;
-  salientFeatures: Array<{ subTitle: string; subDescription: string; _id: string }>;
-  applicationProcess: Array<{ subTitle: string; subDescription: string; _id: string }>;
-  frequentlyAskedQuestions: Array<{ question: string; answer: string; _id: string }>;
-  isActive: boolean;
-  bannerImage?: { url: string; fileId: string };
-  cardImage?: { url: string; fileId: string };
-  helplineNumber?: { tollFreeNumber: string; emailSupport: string; availability: string };
-  sourcesAndReferences?: { sourceName: string; sourceLink: string };
-  disclaimer?: { description: string };
-  listCategory?: string[];
-}
-
-interface State {
-  _id: string;
-  name: string;
-  image?: string;
-}
-
-interface Category {
-  _id: string;
-  name: string;
-  image?: string;
-}
+import {
+  Scheme,
+  State,
+  Category,
+  SchemeFormData,
+  SchemeKeyHighlight,
+  SchemeSubSection,
+  SchemeDateEntry,
+  SchemeFAQ,
+  SchemeHelplineNumber,
+  SchemeSourcesAndReferences,
+} from '@/app/types/scheme';
 
 interface FormField {
   label: string;
-  key: string;
-  type: 'text' | 'textarea' | 'date' | 'json' | 'select' | 'multi-select' | 'file';
+  key: keyof SchemeFormData;
+  type: 'text' | 'textarea' | 'date' | 'json' | 'select' | 'multi-select' | 'file' | 'toggle';
   required?: boolean;
   options?: Array<{ value: string; label: string }>;
 }
@@ -74,7 +49,7 @@ const SchemePage = () => {
   const [totalSchemes, setTotalSchemes] = useState(0);
   const [hasMore, setHasMore] = useState(true);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
-  const [formData, setFormData] = useState<any>({
+  const [formData, setFormData] = useState<SchemeFormData>({
     schemeTitle: '',
     publishedOn: new Date().toISOString().split('T')[0],
     about: '',
@@ -98,7 +73,8 @@ const SchemePage = () => {
     disclaimer: { description: '' },
     listCategory: [],
     bannerImage: null,
-    cardImage: null
+    cardImage: null,
+    isFeatured: true
   });
 
   const formFields: FormField[] = [
@@ -132,6 +108,7 @@ const SchemePage = () => {
     { label: 'Sources', key: 'sourcesAndReferences', type: 'json' },
     { label: 'Disclaimer', key: 'disclaimer', type: 'json' },
     { label: 'List Category', key: 'listCategory', type: 'json' },
+    { label: 'Featured', key: 'isFeatured', type: 'toggle' },
     { label: 'Banner Image', key: 'bannerImage', type: 'file' },
     { label: 'Card Image', key: 'cardImage', type: 'file' }
   ];
@@ -160,11 +137,9 @@ const SchemePage = () => {
         ]);
 
         if (!statesRes.ok) {
-          const errorText = await statesRes.text();
           throw new Error(`Failed to load states: ${statesRes.status} ${statesRes.statusText}`);
         }
         if (!categoriesRes.ok) {
-          const errorText = await categoriesRes.text();
           throw new Error(`Failed to load categories: ${categoriesRes.status} ${categoriesRes.statusText}`);
         }
 
@@ -184,7 +159,7 @@ const SchemePage = () => {
 
 
 
-  const loadSchemes = async (page: number = 1, append: boolean = false) => {
+  const loadSchemes = useCallback(async (page: number = 1, append: boolean = false) => {
     setLoading(true);
     setError(null);
     try {
@@ -210,7 +185,6 @@ const SchemePage = () => {
           setError(null);
           return;
         }
-        const errorText = await res.text();
         throw new Error(`Failed to load schemes: ${res.status} ${res.statusText}`);
       }
       
@@ -268,7 +242,7 @@ const SchemePage = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [selectedState, selectedCategory]);
 
   useEffect(() => {
 
@@ -276,9 +250,8 @@ const SchemePage = () => {
     setTotalPages(1);
     setTotalSchemes(0);
     setHasMore(true);
-    setIsInitialLoad(true);
     loadSchemes(1, false);
-  }, [selectedState, selectedCategory]);
+  }, [selectedState, selectedCategory, loadSchemes]);
 
   const fetchSchemeDetails = async (id: string) => {
     const loadingAlert = showLoading('Loading scheme details...');
@@ -309,12 +282,22 @@ const SchemePage = () => {
     loadSchemes(1, false);
   };
 
-  const handleFormChange = (key: string, value: unknown) => {
-    setFormData((prev: Record<string, any>) => ({ ...prev, [key]: value }));
+  const handleFormChange = <K extends keyof SchemeFormData>(key: K, value: SchemeFormData[K]) => {
+    setFormData((prev) => ({ ...prev, [key]: value }));
   };
 
-  const handleFileChange = (key: string, file: File | null) => {
-    setFormData((prev: Record<string, any>) => ({ ...prev, [key]: file }));
+  const handleFileChange = (key: 'bannerImage' | 'cardImage', file: File | null) => {
+    setFormData((prev) => ({ ...prev, [key]: file }));
+  };
+
+  const extractId = (value: SchemeFormData['category'] | SchemeFormData['state']): string => {
+    if (!value) return '';
+    if (typeof value === 'string') return value;
+    if (typeof value === 'object') {
+      if ('value' in value && typeof value.value === 'string') return value.value;
+      if ('_id' in value && typeof (value as { _id?: string })._id === 'string') return (value as { _id?: string })._id ?? '';
+    }
+    return '';
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -360,12 +343,12 @@ const SchemePage = () => {
         'sourcesAndReferences',
         'disclaimer',
         'listCategory',
-      ];
+      ] as const satisfies readonly (keyof SchemeFormData)[];
 
       for (const key of jsonFields) {
-        const value = formData[key];
+        const value = formData[key] as unknown;
 
-      if (value && (Array.isArray(value) ? value.length > 0 : Object.keys(value).length > 0)) {
+      if (value && (Array.isArray(value) ? value.length > 0 : Object.keys(value as Record<string, unknown>).length > 0)) {
 
         let filteredValue = value;
         if (Array.isArray(value)) {
@@ -377,12 +360,15 @@ const SchemePage = () => {
           });
         } else if (typeof value === 'object' && value !== null) {
           filteredValue = Object.fromEntries(
-            Object.entries(value).filter(([_, val]) => val !== '' && val !== null && val !== undefined)
+            Object.entries(value as Record<string, unknown>).filter((entry) => {
+              const val = entry[1];
+              return val !== '' && val !== null && val !== undefined;
+            })
           );
         }
         
-        if (Array.isArray(filteredValue) ? filteredValue.length > 0 : Object.keys(filteredValue).length > 0) {
-          data.append(key, JSON.stringify(filteredValue));
+        if (Array.isArray(filteredValue) ? filteredValue.length > 0 : Object.keys(filteredValue as Record<string, unknown>).length > 0) {
+          data.append(key, JSON.stringify(filteredValue as unknown));
         } else {
 
           data.append(key, Array.isArray(value) ? '[]' : '{}');
@@ -400,15 +386,11 @@ const SchemePage = () => {
       data.append('about', String(formData.about || ''));
       data.append('objectives', String(formData.objectives || ''));
 
-      const categoryId = typeof formData.category === 'string'
-        ? formData.category
-        : formData.category?.value || formData.category?._id || '';
+      const categoryId = extractId(formData.category);
       if (categoryId) data.append('category', JSON.stringify(categoryId));
       else data.append('category', '""');
 
-      const stateId = typeof formData.state === 'string'
-        ? formData.state
-        : formData.state?.value || formData.state?._id || '';
+      const stateId = extractId(formData.state);
       if (stateId) data.append('state', JSON.stringify([stateId]));
       else data.append('state', '[]');
 
@@ -421,7 +403,7 @@ const SchemePage = () => {
       }
 
 
-      data.append('isFeatured', 'false');
+      data.append('isFeatured', String(Boolean(formData.isFeatured)));
 
 
 
@@ -470,22 +452,23 @@ const SchemePage = () => {
         disclaimer: { description: '' },
         listCategory: [],
         bannerImage: null,
-        cardImage: null
+        cardImage: null,
+        isFeatured: true
       });
-    } catch (err: any) {
+    } catch (e: unknown) {
       loadingAlert.close();
-      await showError(err.message || 'Failed to create scheme');
+      await showError(getErrorMessage(e, 'Failed to create scheme'));
     }
   };
 
   const renderJsonField = (field: FormField) => {
-    const value = formData[field.key] || [];
+    const value = formData[field.key] as unknown;
     
     switch (field.key) {
       case 'keyHighlightsOfTheScheme':
         return (
           <div className="space-y-3">
-            {Array.isArray(value) && value.map((item: any, index: number) => (
+            {Array.isArray(value) && (value as SchemeKeyHighlight[]).map((item, index) => (
               <div key={index} className="flex gap-2 items-start">
                 <div className="flex-1">
                   <Input
@@ -512,8 +495,8 @@ const SchemePage = () => {
                 <button
                   type="button"
                   onClick={() => {
-                    const newValue = value.filter((_: any, i: number) => i !== index);
-                    handleFormChange(field.key, newValue);
+                    const newValue = (value as SchemeKeyHighlight[]).filter((_, i) => i !== index);
+                    handleFormChange('keyHighlightsOfTheScheme', newValue);
                   }}
                   className="px-2 py-1 text-red-600 hover:bg-red-50 rounded"
                 >
@@ -524,8 +507,8 @@ const SchemePage = () => {
             <button
               type="button"
               onClick={() => {
-                const newValue = [...value, { schemeName: '', launchedBy: '' }];
-                handleFormChange(field.key, newValue);
+                const newValue = ([...(value as SchemeKeyHighlight[]), { schemeName: '', launchedBy: '' }] as SchemeKeyHighlight[]);
+                handleFormChange('keyHighlightsOfTheScheme', newValue);
               }}
               className="flex items-center gap-2 text-sm text-brand-600 hover:text-brand-700"
             >
@@ -542,15 +525,15 @@ const SchemePage = () => {
       case 'applicationProcess':
         return (
           <div className="space-y-3">
-            {Array.isArray(value) && value.map((item: any, index: number) => (
+            {Array.isArray(value) && (value as SchemeSubSection[]).map((item, index) => (
               <div key={index} className="space-y-2">
                 <Input
                   placeholder="Sub Title"
                   value={item.subTitle || ''}
                   onChange={(e) => {
-                    const newValue = [...value];
+                    const newValue = ([...(value as SchemeSubSection[])]);
                     newValue[index] = { ...item, subTitle: e.target.value };
-                    handleFormChange(field.key, newValue);
+                    handleFormChange(field.key as keyof SchemeFormData, newValue as SchemeFormData[typeof field.key]);
                   }}
                 />
                 <TextArea
@@ -558,16 +541,16 @@ const SchemePage = () => {
                   placeholder="Sub Description"
                   value={item.subDescription || ''}
                   onChange={(v) => {
-                    const newValue = [...value];
+                    const newValue = ([...(value as SchemeSubSection[])]);
                     newValue[index] = { ...item, subDescription: v };
-                    handleFormChange(field.key, newValue);
+                    handleFormChange(field.key as keyof SchemeFormData, newValue as SchemeFormData[typeof field.key]);
                   }}
                 />
                 <button
                   type="button"
                   onClick={() => {
-                    const newValue = value.filter((_: any, i: number) => i !== index);
-                    handleFormChange(field.key, newValue);
+                    const newValue = (value as SchemeSubSection[]).filter((_, i) => i !== index);
+                    handleFormChange(field.key as keyof SchemeFormData, newValue as SchemeFormData[typeof field.key]);
                   }}
                   className="px-2 py-1 text-red-600 hover:bg-red-50 rounded"
                 >
@@ -578,8 +561,8 @@ const SchemePage = () => {
             <button
               type="button"
               onClick={() => {
-                const newValue = [...value, { subTitle: '', subDescription: '' }];
-                handleFormChange(field.key, newValue);
+                const newValue = ([...(value as SchemeSubSection[]), { subTitle: '', subDescription: '' }] as SchemeSubSection[]);
+                handleFormChange(field.key as keyof SchemeFormData, newValue as SchemeFormData[typeof field.key]);
               }}
               className="flex items-center gap-2 text-sm text-brand-600 hover:text-brand-700"
             >
@@ -592,16 +575,16 @@ const SchemePage = () => {
       case 'importantDates':
         return (
           <div className="space-y-3">
-            {Array.isArray(value) && value.map((item: any, index: number) => (
+            {Array.isArray(value) && (value as SchemeDateEntry[]).map((item, index) => (
               <div key={index} className="flex gap-2 items-start">
                 <div className="flex-1">
                   <Input
                     placeholder="Label (e.g., Start Date, End Date)"
                     value={item.label || ''}
                     onChange={(e) => {
-                      const newValue = [...value];
+                      const newValue = ([...(value as SchemeDateEntry[])]);
                       newValue[index] = { ...item, label: e.target.value };
-                      handleFormChange(field.key, newValue);
+                      handleFormChange('importantDates', newValue);
                     }}
                   />
                 </div>
@@ -610,17 +593,17 @@ const SchemePage = () => {
                     type="date"
                     value={item.date || ''}
                     onChange={(e) => {
-                      const newValue = [...value];
+                      const newValue = ([...(value as SchemeDateEntry[])]);
                       newValue[index] = { ...item, date: e.target.value };
-                      handleFormChange(field.key, newValue);
+                      handleFormChange('importantDates', newValue);
                     }}
                   />
                 </div>
                 <button
                   type="button"
                   onClick={() => {
-                    const newValue = value.filter((_: any, i: number) => i !== index);
-                    handleFormChange(field.key, newValue);
+                    const newValue = (value as SchemeDateEntry[]).filter((_, i) => i !== index);
+                    handleFormChange('importantDates', newValue);
                   }}
                   className="px-2 py-1 text-red-600 hover:bg-red-50 rounded"
                 >
@@ -631,8 +614,8 @@ const SchemePage = () => {
             <button
               type="button"
               onClick={() => {
-                const newValue = [...value, { label: '', date: '' }];
-                handleFormChange(field.key, newValue);
+                const newValue = ([...(value as SchemeDateEntry[]), { label: '', date: '' }]);
+                handleFormChange('importantDates', newValue);
               }}
               className="flex items-center gap-2 text-sm text-brand-600 hover:text-brand-700"
             >
@@ -647,23 +630,26 @@ const SchemePage = () => {
           <div className="space-y-3">
             <Input
               placeholder="Toll Free Number"
-              value={value.tollFreeNumber || ''}
+              value={(value as SchemeHelplineNumber).tollFreeNumber || ''}
               onChange={(e) => {
-                handleFormChange(field.key, { ...value, tollFreeNumber: e.target.value });
+                const v = value as SchemeHelplineNumber;
+                handleFormChange('helplineNumber', { ...v, tollFreeNumber: e.target.value });
               }}
             />
             <Input
               placeholder="Email Support"
-              value={value.emailSupport || ''}
+              value={(value as SchemeHelplineNumber).emailSupport || ''}
               onChange={(e) => {
-                handleFormChange(field.key, { ...value, emailSupport: e.target.value });
+                const v = value as SchemeHelplineNumber;
+                handleFormChange('helplineNumber', { ...v, emailSupport: e.target.value });
               }}
             />
             <Input
               placeholder="Availability (e.g., 9 AM - 5 PM)"
-              value={value.availability || ''}
+              value={(value as SchemeHelplineNumber).availability || ''}
               onChange={(e) => {
-                handleFormChange(field.key, { ...value, availability: e.target.value });
+                const v = value as SchemeHelplineNumber;
+                handleFormChange('helplineNumber', { ...v, availability: e.target.value });
               }}
             />
           </div>
@@ -672,15 +658,15 @@ const SchemePage = () => {
       case 'frequentlyAskedQuestions':
         return (
           <div className="space-y-3">
-            {Array.isArray(value) && value.map((item: any, index: number) => (
+            {Array.isArray(value) && (value as SchemeFAQ[]).map((item, index) => (
               <div key={index} className="space-y-2">
                 <Input
                   placeholder="Question"
                   value={item.question || ''}
                   onChange={(e) => {
-                    const newValue = [...value];
+                    const newValue = ([...(value as SchemeFAQ[])]);
                     newValue[index] = { ...item, question: e.target.value };
-                    handleFormChange(field.key, newValue);
+                    handleFormChange('frequentlyAskedQuestions', newValue);
                   }}
                 />
                 <TextArea
@@ -688,16 +674,16 @@ const SchemePage = () => {
                   placeholder="Answer"
                   value={item.answer || ''}
                   onChange={(v) => {
-                    const newValue = [...value];
+                    const newValue = ([...(value as SchemeFAQ[])]);
                     newValue[index] = { ...item, answer: v };
-                    handleFormChange(field.key, newValue);
+                    handleFormChange('frequentlyAskedQuestions', newValue);
                   }}
                 />
                 <button
                   type="button"
                   onClick={() => {
-                    const newValue = value.filter((_: any, i: number) => i !== index);
-                    handleFormChange(field.key, newValue);
+                    const newValue = (value as SchemeFAQ[]).filter((_, i) => i !== index);
+                    handleFormChange('frequentlyAskedQuestions', newValue);
                   }}
                   className="px-2 py-1 text-red-600 hover:bg-red-50 rounded"
                 >
@@ -708,8 +694,8 @@ const SchemePage = () => {
             <button
               type="button"
               onClick={() => {
-                const newValue = [...value, { question: '', answer: '' }];
-                handleFormChange(field.key, newValue);
+                const newValue = ([...(value as SchemeFAQ[]), { question: '', answer: '' }] as SchemeFAQ[]);
+                handleFormChange('frequentlyAskedQuestions', newValue);
               }}
               className="flex items-center gap-2 text-sm text-brand-600 hover:text-brand-700"
             >
@@ -724,16 +710,18 @@ const SchemePage = () => {
           <div className="space-y-3">
             <Input
               placeholder="Source Name"
-              value={value.sourceName || ''}
+              value={(value as SchemeSourcesAndReferences).sourceName || ''}
               onChange={(e) => {
-                handleFormChange(field.key, { ...value, sourceName: e.target.value });
+                const v = value as SchemeSourcesAndReferences;
+                handleFormChange('sourcesAndReferences', { ...v, sourceName: e.target.value });
               }}
             />
             <Input
               placeholder="Source Link"
-              value={value.sourceLink || ''}
+              value={(value as SchemeSourcesAndReferences).sourceLink || ''}
               onChange={(e) => {
-                handleFormChange(field.key, { ...value, sourceLink: e.target.value });
+                const v = value as SchemeSourcesAndReferences;
+                handleFormChange('sourcesAndReferences', { ...v, sourceLink: e.target.value });
               }}
             />
           </div>
@@ -744,9 +732,10 @@ const SchemePage = () => {
           <TextArea
             rows={3}
             placeholder="Disclaimer description"
-            value={value.description || ''}
+            value={(value as { description: string }).description || ''}
             onChange={(v) => {
-              handleFormChange(field.key, { ...value, description: v });
+              const current = value as { description: string };
+              handleFormChange('disclaimer', { ...current, description: v });
             }}
           />
         );
@@ -754,22 +743,22 @@ const SchemePage = () => {
       case 'listCategory':
         return (
           <div className="space-y-3">
-            {Array.isArray(value) && value.map((item: string, index: number) => (
+            {Array.isArray(value) && (value as string[]).map((item, index) => (
               <div key={index} className="flex gap-2 items-center">
                 <Input
                   placeholder="Category name"
                   value={item || ''}
                   onChange={(e) => {
-                    const newValue = [...value];
+                    const newValue = ([...(value as string[])]);
                     newValue[index] = e.target.value;
-                    handleFormChange(field.key, newValue);
+                    handleFormChange('listCategory', newValue);
                   }}
                 />
                 <button
                   type="button"
                   onClick={() => {
-                    const newValue = value.filter((_: any, i: number) => i !== index);
-                    handleFormChange(field.key, newValue);
+                    const newValue = (value as string[]).filter((_, i) => i !== index);
+                    handleFormChange('listCategory', newValue);
                   }}
                   className="px-2 py-1 text-red-600 hover:bg-red-50 rounded"
                 >
@@ -780,8 +769,8 @@ const SchemePage = () => {
             <button
               type="button"
               onClick={() => {
-                const newValue = [...value, ''];
-                handleFormChange(field.key, newValue);
+                const newValue = ([...(value as string[]), '']);
+                handleFormChange('listCategory', newValue);
               }}
               className="flex items-center gap-2 text-sm text-brand-600 hover:text-brand-700"
             >
@@ -796,14 +785,13 @@ const SchemePage = () => {
           <div className="space-y-2">
             <TextArea
               rows={3}
-              value={JSON.stringify(value || '', null, 2)}
+              value={JSON.stringify(value ?? '', null, 2)}
               onChange={(v) => {
                 try {
                   const parsed = JSON.parse(v);
-                  handleFormChange(field.key, parsed);
-                } catch (e) {
-                  // Keep the raw value if it's not valid JSON
-                  handleFormChange(field.key, v);
+                  handleFormChange(field.key as keyof SchemeFormData, parsed as SchemeFormData[typeof field.key]);
+                } catch {
+                  // Ignore invalid JSON edits
                 }
               }}
               placeholder={`Enter ${field.label} as JSON`}
@@ -822,8 +810,8 @@ const SchemePage = () => {
       case 'text':
         return (
           <Input
-            value={formData[field.key] || ''}
-            onChange={(e) => handleFormChange(field.key, e.target.value)}
+            value={(formData[field.key] as string) || ''}
+            onChange={(e) => handleFormChange(field.key as keyof SchemeFormData, e.target.value as unknown as SchemeFormData[keyof SchemeFormData])}
             placeholder={`Enter ${field.label.toLowerCase()}`}
             required={field.required}
           />
@@ -832,8 +820,8 @@ const SchemePage = () => {
         return (
           <TextArea
             rows={3}
-            value={formData[field.key] || ''}
-            onChange={(v) => handleFormChange(field.key, v)}
+            value={(formData[field.key] as string) || ''}
+            onChange={(v) => handleFormChange(field.key as keyof SchemeFormData, v as unknown as SchemeFormData[keyof SchemeFormData])}
             placeholder={`Enter ${field.label.toLowerCase()}`}
           />
         );
@@ -841,8 +829,8 @@ const SchemePage = () => {
         return (
           <Input
             type="date"
-            value={formData[field.key] || ''}
-            onChange={(e) => handleFormChange(field.key, e.target.value)}
+            value={(formData[field.key] as string) || ''}
+            onChange={(e) => handleFormChange(field.key as keyof SchemeFormData, e.target.value as unknown as SchemeFormData[keyof SchemeFormData])}
             required={field.required}
           />
         );
@@ -850,19 +838,31 @@ const SchemePage = () => {
         return (
           <Select
             options={field.options || []}
-            value={formData[field.key] || ''}
-            onChange={(v) => handleFormChange(field.key, v)}
+            value={field.key === 'category' ? extractId(formData.category) : field.key === 'state' ? extractId(formData.state) : ''}
+            onChange={(v) => handleFormChange(field.key as keyof SchemeFormData, String(v) as unknown as SchemeFormData[keyof SchemeFormData])}
             placeholder={`Select ${field.label.toLowerCase()}`}
             required={field.required}
           />
+        );
+      case 'toggle':
+        return (
+          <div className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              checked={Boolean(formData.isFeatured)}
+              onChange={(e) => handleFormChange('isFeatured', e.target.checked)}
+              className="h-4 w-4"
+            />
+            <span className="text-sm text-gray-600">Mark as featured</span>
+          </div>
         );
       case 'multi-select':
         return (
           <Select
             isMulti
             options={field.options || []}
-            value={formData[field.key] || []}
-            onChange={(v) => handleFormChange(field.key, v)}
+            value={Array.isArray(formData[field.key]) ? (formData[field.key] as string[]) : []}
+            onChange={(v) => handleFormChange(field.key as keyof SchemeFormData, (Array.isArray(v) ? v : [String(v)]) as unknown as SchemeFormData[keyof SchemeFormData])}
             placeholder={`Select ${field.label.toLowerCase()}`}
             required={field.required}
           />
@@ -874,7 +874,12 @@ const SchemePage = () => {
           <input
             type="file"
             accept="image/*"
-            onChange={(e) => handleFileChange(field.key, e.target.files?.[0] || null)}
+            onChange={(e) => {
+              const file = e.target.files?.[0] || null;
+              if (field.key === 'bannerImage' || field.key === 'cardImage') {
+                handleFileChange(field.key, file);
+              }
+            }}
             className="block w-full text-sm text-gray-500
               file:mr-4 file:py-2 file:px-4
               file:rounded-md file:border-0
@@ -1028,7 +1033,7 @@ const SchemePage = () => {
                           )}
                           {scheme.state && scheme.state.length > 0 && (
                             <span className="text-xs px-2 py-1 bg-gray-100 rounded-md">
-                              {scheme.state.map((s: any) => s.name || s).join(', ')}
+                              {scheme.state.map((s) => (typeof s === 'string' ? s : s.name)).join(', ')}
                             </span>
                           )}
                           <span className="text-xs px-2 py-1 bg-gray-100 rounded-md">
