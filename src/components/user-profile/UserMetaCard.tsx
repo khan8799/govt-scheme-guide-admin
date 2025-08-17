@@ -11,10 +11,14 @@ import { DEFAULT_USER_AVATAR } from "@/config/media";
 
 export default function UserMetaCard() {
   const { isOpen, closeModal } = useModal();
-  const handleSave = () => {
-    // Handle save logic here
-    console.log("Saving changes...");
-    closeModal();
+  const handleSave = async () => {
+    try {
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      closeModal();
+    } catch {
+      // Handle error if needed
+    }
   };
   return (
     <>

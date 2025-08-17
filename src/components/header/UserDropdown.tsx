@@ -1,49 +1,28 @@
 "use client";
 import Avatar from "@/components/ui/avatar/Avatar";
 import { DEFAULT_USER_AVATAR } from "@/config/media";
-// import Link from "next/link";
-import React, { useEffect, useState } from "react";
-import { API_BASE_URL, API_PATHS } from "@/config/api";
+import React, { useState } from "react";
 import { Dropdown } from "../ui/dropdown/Dropdown";
+import { useAuth } from "@/context/AuthContext";
 
 export default function UserDropdown() {
   const [isOpen, setIsOpen] = useState(false);
-  const [userName, setUserName] = useState<string>("Admin");
-  const [userEmail, setUserEmail] = useState<string>("admin@example.com");
+  const { user, logout } = useAuth();
 
-  useEffect(() => {
-    try {
-      const raw = typeof window !== 'undefined' ? localStorage.getItem('user') : null;
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        if (parsed?.name) setUserName(parsed.name);
-        if (parsed?.email) setUserEmail(parsed.email);
-      }
-    } catch {}
-  }, []);
-
-function toggleDropdown(e: React.MouseEvent<HTMLButtonElement, MouseEvent>) {
-  e.stopPropagation();
-  setIsOpen((prev) => !prev);
-}
+  function toggleDropdown(e: React.MouseEvent<HTMLButtonElement, MouseEvent>) {
+    e.stopPropagation();
+    setIsOpen((prev) => !prev);
+  }
 
   function closeDropdown() {
     setIsOpen(false);
   }
-  async function fetchAllUsers() {
-    try {
-      const res = await fetch(`${API_BASE_URL}${API_PATHS.allUsers}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: "mohanYadav!23@gmail.com", password: "224466" }),
-      });
-      const data = await res.json();
-      console.log("allUsers:", data);
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    } catch (e) {
-      console.error("Failed to load users");
-    }
-  }
+
+  const handleLogout = () => {
+    logout();
+    closeDropdown();
+  };
+
   return (
     <div className="relative">
       <button
@@ -54,7 +33,7 @@ function toggleDropdown(e: React.MouseEvent<HTMLButtonElement, MouseEvent>) {
           <Avatar src={DEFAULT_USER_AVATAR} size="large" />
         </span>
 
-        <span className="block mr-1 font-medium text-theme-sm">{userName}</span>
+        <span className="block mr-1 font-medium text-theme-sm">{user?.name || "Admin"}</span>
 
         <svg
           className={`stroke-gray-500 dark:stroke-gray-400 transition-transform duration-200 ${
@@ -83,40 +62,13 @@ function toggleDropdown(e: React.MouseEvent<HTMLButtonElement, MouseEvent>) {
       >
         <div>
           <span className="block font-medium text-gray-700 text-theme-sm dark:text-gray-400">
+            {user?.name || "Admin"}
           </span>
-          <span className="mt-0.5 block text-theme-xs text-gray-500 dark:text-gray-400">{userEmail}</span>
+          <span className="mt-0.5 block text-theme-xs text-gray-500 dark:text-gray-400">{user?.email || "admin@example.com"}</span>
         </div>
 
         <button
-          onClick={fetchAllUsers}
-          className="flex items-center gap-3 px-3 py-2 mt-3 font-medium text-gray-700 rounded-lg group text-theme-sm hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-white/5 dark:hover:text-gray-300"
-        >
-          <svg
-            className="fill-gray-500 group-hover:fill-gray-700 dark:group-hover:fill-gray-300"
-            width="24"
-            height="24"
-            viewBox="0 0 24 24"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path
-              fillRule="evenodd"
-              clipRule="evenodd"
-              d="M12 3.75C7.99594 3.75 4.75 6.99594 4.75 11C4.75 15.0041 7.99594 18.25 12 18.25C16.0041 18.25 19.25 15.0041 19.25 11C19.25 6.99594 16.0041 3.75 12 3.75ZM3.25 11C3.25 6.16751 7.16751 2.25 12 2.25C16.8325 2.25 20.75 6.16751 20.75 11C20.75 15.8325 16.8325 19.75 12 19.75C7.16751 19.75 3.25 15.8325 3.25 11ZM7.75 10.25C7.33579 10.25 7 10.5858 7 11C7 11.4142 7.33579 11.75 7.75 11.75H16.25C16.6642 11.75 17 11.4142 17 11C17 10.5858 16.6642 10.25 16.25 10.25H7.75Z"
-              fill="currentColor"
-            />
-          </svg>
-          Load Users
-        </button>
-
-        <button
-          onClick={() => {
-            try {
-              localStorage.removeItem('token');
-              localStorage.removeItem('user');
-            } catch {}
-            window.location.href = '/signin';
-          }}
+          onClick={handleLogout}
           className="flex items-center gap-3 px-3 py-2 mt-3 font-medium text-gray-700 rounded-lg group text-theme-sm hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-white/5 dark:hover:text-gray-300"
         >
           <svg

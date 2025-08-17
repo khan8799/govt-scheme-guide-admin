@@ -6,47 +6,48 @@ import Link from "next/link";
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import { loginUser } from "@/app/service/authService";
+import { useAuth } from "@/context/AuthContext";
+import { showSuccess, showError, showLoading } from "@/components/SweetAlert";
 
 export default function SignInForm() {
   const router = useRouter();
+  const { login } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [form, setForm] = useState({ email: "", password: "" });
   const [submitting, setSubmitting] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
 
   const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
-  e.preventDefault();
-  setMessage(null);
+    e.preventDefault();
 
-  if (!form.email || !form.password) {
-    setMessage("Both email and password are required");
-    return;
-  }
+    if (!form.email || !form.password) {
+      await showError("Both email and password are required");
+      return;
+    }
 
+    const loadingAlert = showLoading("Signing in...");
     try {
-    setSubmitting(true);
-    const { data } = await loginUser(form);
-      try {
+      setSubmitting(true);
+      const { data } = await loginUser(form);
+      
       if (data?.token) {
-        // Store token with Bearer prefix for Authorization header usage
-        localStorage.setItem("token", `Bearer ${data.token}`);
+        loadingAlert.close();
+        await showSuccess("Login successful! Redirecting...");
+        // Use the auth context to login
+        login(data.token, data.user);
+        router.push("/admin");
+      } else {
+        loadingAlert.close();
+        await showError("Login failed: No token received");
       }
-      if (data?.user) {
-        localStorage.setItem("user", JSON.stringify(data.user));
-      }
-      } catch {
-        // ignore storage errors but continue navigation
-      }
-    alert(data?.message || "Login successful");
-    router.push("/");
-  } catch (e: unknown) {
-    const maybe = e as { message?: string; response?: { data?: { message?: string } } };
-    setMessage(maybe?.response?.data?.message || maybe?.message || "Login failed");
-  } finally {
-    setSubmitting(false);
-  }
-};
-
+    } catch (e: unknown) {
+      loadingAlert.close();
+      const maybe = e as { message?: string; response?: { data?: { message?: string } } };
+      const errorMessage = maybe?.response?.data?.message || maybe?.message || "Login failed";
+      await showError(errorMessage);
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   return (
     <div className="flex flex-col flex-1 lg:w-1/2 w-full overflow-y-auto no-scrollbar">
@@ -101,17 +102,13 @@ export default function SignInForm() {
             </div>
           </form>
 
-          {/* Message */}
-          {message && (
-            <p className="mt-3 text-center text-sm text-gray-600">{message}</p>
-          )}
-
-          {/* Sign Up Link */}
-          <div className="mt-5 text-center">
-            Don’t have an account?{" "}
-            <Link href="/signup" className="text-brand-500 hover:text-brand-600">
-              Sign Up
-            </Link>
+          <div className="mt-6 text-center">
+            <p className="text-sm text-gray-600">
+              Don&apos;t have an account?{" "}
+              <Link href="/signup" className="text-brand-500 hover:text-brand-600">
+                Sign up
+              </Link>
+            </p>
           </div>
         </div>
       </div>

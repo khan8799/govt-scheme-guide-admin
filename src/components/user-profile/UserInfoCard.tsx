@@ -8,10 +8,14 @@ import Label from "../form/Label";
 
 export default function UserInfoCard() {
   const { isOpen, closeModal } = useModal();
-  const handleSave = () => {
-    // Handle save logic here
-    console.log("Saving changes...");
-    closeModal();
+  const handleSave = async () => {
+    try {
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      closeModal();
+    } catch {
+      // Handle error if needed
+    }
   };
   return (
     <div className="p-5 border border-gray-200 rounded-2xl dark:border-gray-800 lg:p-6">
