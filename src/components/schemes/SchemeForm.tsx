@@ -20,12 +20,10 @@ interface SchemeFormProps {
   formData: SchemeFormData;
   onChange: <K extends keyof SchemeFormData>(key: K, value: SchemeFormData[K]) => void;
   onFileChange: (key: 'bannerImage' | 'cardImage', file: File | null) => void;
-  categoriesOptions: Array<{ value: string; label: string }>;
-  statesOptions: Array<{ value: string; label: string }>;
   onSubmit: (e: React.FormEvent) => void;
 }
 
-const SchemeForm: React.FC<SchemeFormProps> = ({ formFields, formData, onChange, onFileChange, categoriesOptions, statesOptions, onSubmit }) => {
+const SchemeForm: React.FC<SchemeFormProps> = ({ formFields, formData, onChange, onFileChange, onSubmit }) => {
   const extractId = (value: SchemeFormData['category'] | SchemeFormData['state']): string => {
     if (!value) return '';
     if (typeof value === 'string') return value;

@@ -2,6 +2,7 @@
 import React from 'react';
 import Image from 'next/image';
 import { Scheme } from '@/app/types/scheme';
+import { parseBulletPoints } from '@/utils/textParsing';
 
 interface SchemeDetailsModalProps {
   scheme: Scheme;
@@ -9,8 +10,8 @@ interface SchemeDetailsModalProps {
 }
 
 const Section: React.FC<{ title: string; children: React.ReactNode }> = ({ title, children }) => (
-  <div className="my-6">
-    <h3 className="text-lg font-semibold mb-2">{title}</h3>
+  <div className="mb-6">
+    <h3 className="font-semibold text-lg mb-3 text-gray-800">{title}</h3>
     <div>{children}</div>
   </div>
 );
@@ -60,37 +61,73 @@ const SchemeDetailsModal: React.FC<SchemeDetailsModalProps> = ({ scheme, onClose
 
           {scheme.eligibilityCriteria?.length > 0 && (
             <Section title="Eligibility Criteria">
-              <ul className="list-disc pl-5 space-y-1">
-                {scheme.eligibilityCriteria.map((item) => (
-                  <li key={item._id}>
-                    <strong>{item.subTitle}:</strong> {item.subDescription}
-                  </li>
-                ))}
-              </ul>
+              {scheme.eligibilityCriteria.map((item) => {
+                const bulletPoints = parseBulletPoints(item.subDescription);
+                return (
+                  <div key={item._id} className="mb-4">
+                    {item.subTitle && (
+                      <h4 className="font-medium mb-2 text-gray-700">{item.subTitle}</h4>
+                    )}
+                    {bulletPoints.length > 0 ? (
+                      <ul className="list-disc pl-5 space-y-1">
+                        {bulletPoints.map((point, index) => (
+                          <li key={index} className="text-gray-700">{point}</li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="text-gray-700">{item.subDescription}</p>
+                    )}
+                  </div>
+                );
+              })}
             </Section>
           )}
 
           {scheme.financialBenefits?.length > 0 && (
             <Section title="Financial Benefits">
-              <ul className="list-disc pl-5 space-y-1">
-                {scheme.financialBenefits.map((item) => (
-                  <li key={item._id}>
-                    <strong>{item.subTitle}:</strong> {item.subDescription}
-                  </li>
-                ))}
-              </ul>
+              {scheme.financialBenefits.map((item) => {
+                const bulletPoints = parseBulletPoints(item.subDescription);
+                return (
+                  <div key={item._id} className="mb-4">
+                    {item.subTitle && (
+                      <h4 className="font-medium mb-2 text-gray-700">{item.subTitle}</h4>
+                    )}
+                    {bulletPoints.length > 0 ? (
+                      <ul className="list-disc pl-5 space-y-1">
+                        {bulletPoints.map((point, index) => (
+                          <li key={index} className="text-gray-700">{point}</li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="text-gray-700">{item.subDescription}</p>
+                    )}
+                  </div>
+                );
+              })}
             </Section>
           )}
 
           {scheme.requiredDocuments?.length > 0 && (
             <Section title="Required Documents">
-              <ul className="list-disc pl-5 space-y-1">
-                {scheme.requiredDocuments.map((item) => (
-                  <li key={item._id}>
-                    <strong>{item.subTitle}:</strong> {item.subDescription}
-                  </li>
-                ))}
-              </ul>
+              {scheme.requiredDocuments.map((item) => {
+                const bulletPoints = parseBulletPoints(item.subDescription);
+                return (
+                  <div key={item._id} className="mb-4">
+                    {item.subTitle && (
+                      <h4 className="font-medium mb-2 text-gray-700">{item.subTitle}</h4>
+                    )}
+                    {bulletPoints.length > 0 ? (
+                      <ul className="list-disc pl-5 space-y-1">
+                        {bulletPoints.map((point, index) => (
+                          <li key={index} className="text-gray-700">{point}</li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="text-gray-700">{item.subDescription}</p>
+                    )}
+                  </div>
+                );
+              })}
             </Section>
           )}
 
@@ -108,25 +145,49 @@ const SchemeDetailsModal: React.FC<SchemeDetailsModalProps> = ({ scheme, onClose
 
           {scheme.salientFeatures?.length > 0 && (
             <Section title="Salient Features">
-              <ul className="list-disc pl-5 space-y-1">
-                {scheme.salientFeatures.map((item) => (
-                  <li key={item._id}>
-                    <strong>{item.subTitle}:</strong> {item.subDescription}
-                  </li>
-                ))}
-              </ul>
+              {scheme.salientFeatures.map((item) => {
+                const bulletPoints = parseBulletPoints(item.subDescription);
+                return (
+                  <div key={item._id} className="mb-4">
+                    {item.subTitle && (
+                      <h4 className="font-medium mb-2 text-gray-700">{item.subTitle}</h4>
+                    )}
+                    {bulletPoints.length > 0 ? (
+                      <ul className="list-disc pl-5 space-y-1">
+                        {bulletPoints.map((point, index) => (
+                          <li key={index} className="text-gray-700">{point}</li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="text-gray-700">{item.subDescription}</p>
+                    )}
+                  </div>
+                );
+              })}
             </Section>
           )}
 
           {scheme.applicationProcess?.length > 0 && (
             <Section title="Application Process">
-              <ul className="list-disc pl-5 space-y-1">
-                {scheme.applicationProcess.map((item) => (
-                  <li key={item._id}>
-                    <strong>{item.subTitle}:</strong> {item.subDescription}
-                  </li>
-                ))}
-              </ul>
+              {scheme.applicationProcess.map((item) => {
+                const bulletPoints = parseBulletPoints(item.subDescription);
+                return (
+                  <div key={item._id} className="mb-4">
+                    {item.subTitle && (
+                      <h4 className="font-medium mb-2 text-gray-700">{item.subTitle}</h4>
+                    )}
+                    {bulletPoints.length > 0 ? (
+                      <ul className="list-disc pl-5 space-y-1">
+                        {bulletPoints.map((point, index) => (
+                          <li key={index} className="text-gray-700">{point}</li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="text-gray-700">{item.subDescription}</p>
+                    )}
+                  </div>
+                );
+              })}
             </Section>
           )}
 

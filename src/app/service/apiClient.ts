@@ -6,16 +6,31 @@ const apiClient = {
   get: async <T>(endpoint: string, token?: string): Promise<T> => {
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0',
     };
 
     if (token) {
       headers['Authorization'] = token;
     }
 
-    const response = await fetch(`${API_BASE_URL}/${endpoint}`, { headers });
-    if (!response.ok) {
+    const response = await fetch(`${API_BASE_URL}/${endpoint}`, { 
+      headers,
+      cache: 'no-store'
+    });
+    
+    if (!response.ok && response.status !== 304) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
+    
+    // Handle 304 Not Modified - return cached data or empty response
+    if (response.status === 304) {
+      console.log('Response not modified, using cached data');
+      // You might want to return cached data here if you have it
+      throw new Error('Data not modified');
+    }
+    
     return response.json();
   },
 

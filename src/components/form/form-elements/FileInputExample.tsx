@@ -1,23 +1,26 @@
 "use client";
-import React from "react";
-import ComponentCard from "../../common/ComponentCard";
-import FileInput from "../input/FileInput";
-import Label from "../Label";
+import React, { useState } from "react";
+import Input from "../input/FileInput";
 
 export default function FileInputExample() {
+  const [file, setFile] = useState<File | null>(null);
+
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      console.log("Selected file:", file.name);
-    }
+    const selectedFile = event.target.files?.[0] || null;
+    setFile(selectedFile);
   };
 
   return (
-    <ComponentCard title="File Input">
-      <div>
-        <Label>Upload file</Label>
-        <FileInput onChange={handleFileChange} className="custom-class" />
-      </div>
-    </ComponentCard>
+    <div className="space-y-4">
+      <Input
+        onChange={handleFileChange}
+        className="custom-class"
+      />
+      {file && (
+        <p className="text-sm text-gray-600">
+          Selected file: {file.name}
+        </p>
+      )}
+    </div>
   );
 }
