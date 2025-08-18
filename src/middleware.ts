@@ -15,8 +15,6 @@ const publicRoutes = [
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
-  
-  // Check for token in cookies first, then in Authorization header
   const token = request.cookies.get('token')?.value || 
                 request.headers.get('authorization')?.replace('Bearer ', '') ||
                 request.headers.get('authorization');
