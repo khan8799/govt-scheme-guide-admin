@@ -6,20 +6,19 @@ import Link from "next/link";
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import { registerUser } from "@/app/service/authService";
+import { showSuccess, showError, showLoading } from "@/components/SweetAlert";
 
 export default function SignUpForm() {
   const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
   const [form, setForm] = useState({ name: "", email: "", password: "", phone: "" });
   const [submitting, setSubmitting] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
 
 const handleRegister = async (e: React.FormEvent<HTMLFormElement>) => {
   e.preventDefault();
-  setMessage(null);
 
   if (!form.name || !form.email || !form.password || !form.phone) {
-    setMessage("All fields are required");
+    await showError("All fields are required");
     return;
   }
 
@@ -27,18 +26,23 @@ const handleRegister = async (e: React.FormEvent<HTMLFormElement>) => {
     form.email === "mohanYadav!23@gmail.com" &&
     form.password === "224466"
   ) {
-    alert("Register Successful. Redirecting to Sign In.");
+    await showSuccess("Register Successful. Redirecting to Sign In.");
     router.push("/signin");
     return;
   }
 
+  const loadingAlert = showLoading("Creating account...");
   try {
     setSubmitting(true);
-    const { data } = await registerUser(form);
-    alert("Registration successful, please login");
+    await registerUser(form);
+    loadingAlert.close();
+    await showSuccess("Registration successful, please login");
     router.push("/signin");
-  } catch (err: any) {
-    setMessage(err.response?.data?.message || err.message || "Registration failed");
+  } catch (e: unknown) {
+    loadingAlert.close();
+    const maybe = e as { message?: string; response?: { data?: { message?: string } } };
+    const errorMessage = maybe?.response?.data?.message || maybe?.message || "Registration failed";
+    await showError(errorMessage);
   } finally {
     setSubmitting(false);
   }
@@ -95,8 +99,6 @@ const handleRegister = async (e: React.FormEvent<HTMLFormElement>) => {
               </div>
             </div>
           </form>
-
-          {message && <p className="mt-3 text-center text-sm text-gray-600">{message}</p>}
 
           <div className="mt-5 text-center">
             Already have an account?{" "}
