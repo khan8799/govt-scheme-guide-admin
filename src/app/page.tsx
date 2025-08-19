@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import AuthLoading from '@/components/auth/AuthLoading';
 import AdminLayout from './(admin)/layout';
-import AdminDashboard from './(admin)/page';
+import AdminDashboard from './(admin)/dashboard/page';
 
 export default function RootPage() {
   const { isAuthenticated, isLoading } = useAuth();
