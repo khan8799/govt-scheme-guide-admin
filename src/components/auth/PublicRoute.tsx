@@ -17,7 +17,7 @@ export const PublicRoute: React.FC<PublicRouteProps> = ({
 
   useEffect(() => {
     if (!isLoading && isAuthenticated) {
-      router.push('/admin');
+      router.push('/');
     }
   }, [isAuthenticated, isLoading, router]);
 

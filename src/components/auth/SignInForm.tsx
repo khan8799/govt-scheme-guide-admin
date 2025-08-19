@@ -34,7 +34,7 @@ export default function SignInForm() {
         await showSuccess("Login successful! Redirecting...");
         // Use the auth context to login
         login(data.token, data.user);
-        router.push("/admin");
+        router.push("/");
       } else {
         loadingAlert.close();
         await showError("Login failed: No token received");
