@@ -1,5 +1,3 @@
-// src/app/types/scheme.ts
-
 export interface NamedEntity {
 	_id: string;
 	name: string;
@@ -58,6 +56,9 @@ export interface Scheme {
 	state: Array<NamedEntity> | string[];
 	publishedOn: string; // ISO date string
 	objectives: string;
+	excerpt?: string;
+	seoTitle?: string;
+	seoMetaDescription?: string;
 	keyHighlightsOfTheScheme: SchemeKeyHighlight[];
 	eligibilityCriteria: SchemeSubSection[];
 	financialBenefits: SchemeSubSection[];
@@ -76,7 +77,6 @@ export interface Scheme {
 	listCategory?: string[];
 }
 
-// Form-specific type used for create/edit UI
 export interface SchemeFormData {
 	schemeTitle: string;
 	publishedOn: string;
@@ -84,6 +84,9 @@ export interface SchemeFormData {
 	objectives: string;
 	category: string | { value: string } | NamedEntity | '';
 	state: string | { value: string } | NamedEntity | '';
+	excerpt: string;
+	seoTitle: string;
+	seoMetaDescription: string;
 	keyHighlightsOfTheScheme: SchemeKeyHighlight[];
 	eligibilityCriteria: SchemeSubSection[];
 	financialBenefits: SchemeSubSection[];
