@@ -52,6 +52,9 @@ const SchemePage = () => {
     objectives: '',
     category: '',
     state: '',
+    excerpt: '',
+    seoTitle: '',
+    seoMetaDescription: '',
     keyHighlightsOfTheScheme: [{ schemeName: '', launchedBy: '' }],
     eligibilityCriteria: [{ subTitle: '', subDescription: '' }],
     financialBenefits: [{ subTitle: '', subDescription: '' }],
@@ -92,6 +95,9 @@ const SchemePage = () => {
       required: true,
       options: states.map(state => ({ value: state._id, label: state.name }))
     },
+    { label: 'Excerpt', key: 'excerpt', type: 'textarea' },
+    { label: 'SEO Title', key: 'seoTitle', type: 'text' },
+    { label: 'SEO Meta Description', key: 'seoMetaDescription', type: 'textarea' },
     { label: 'Key Highlights', key: 'keyHighlightsOfTheScheme', type: 'json' },
     { label: 'Eligibility Criteria', key: 'eligibilityCriteria', type: 'json' },
     { label: 'Financial Benefits', key: 'financialBenefits', type: 'json' },
@@ -306,6 +312,9 @@ const SchemePage = () => {
       data.append('publishedOn', String(formData.publishedOn || ''));
       data.append('about', String(formData.about || ''));
       data.append('objectives', String(formData.objectives || ''));
+      data.append('excerpt', String(formData.excerpt || ''));
+      data.append('seoTitle', String(formData.seoTitle || ''));
+      data.append('seoMetaDescription', String(formData.seoMetaDescription || ''));
 
       const categoryId = extractId(formData.category);
       if (categoryId) data.append('category', JSON.stringify(categoryId)); else data.append('category', '""');
@@ -344,6 +353,9 @@ const SchemePage = () => {
         objectives: '',
         category: '',
         state: '',
+        excerpt: '',
+        seoTitle: '',
+        seoMetaDescription: '',
         keyHighlightsOfTheScheme: [{ schemeName: '', launchedBy: '' }],
         eligibilityCriteria: [{ subTitle: '', subDescription: '' }],
         financialBenefits: [{ subTitle: '', subDescription: '' }],
@@ -626,6 +638,29 @@ const SchemePage = () => {
                   <p className="text-gray-700">{selectedScheme.objectives}</p>
                 </div>
               </div>
+
+              {(selectedScheme.excerpt || selectedScheme.seoTitle || selectedScheme.seoMetaDescription) && (
+                <Section title="SEO & Content">
+                  {selectedScheme.excerpt && (
+                    <div className="mb-4">
+                      <h4 className="font-medium mb-2 text-gray-700">Excerpt</h4>
+                      <p className="text-gray-700">{selectedScheme.excerpt}</p>
+                    </div>
+                  )}
+                  {selectedScheme.seoTitle && (
+                    <div className="mb-4">
+                      <h4 className="font-medium mb-2 text-gray-700">SEO Title</h4>
+                      <p className="text-gray-700">{selectedScheme.seoTitle}</p>
+                    </div>
+                  )}
+                  {selectedScheme.seoMetaDescription && (
+                    <div className="mb-4">
+                      <h4 className="font-medium mb-2 text-gray-700">SEO Meta Description</h4>
+                      <p className="text-gray-700">{selectedScheme.seoMetaDescription}</p>
+                    </div>
+                  )}
+                </Section>
+              )}
 
               {selectedScheme.keyHighlightsOfTheScheme?.length > 0 && (
                 <Section title="Key Highlights">
