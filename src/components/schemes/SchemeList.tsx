@@ -2,20 +2,26 @@
 import React from 'react';
 import Image from 'next/image';
 import { Scheme } from '@/app/types/scheme';
-import { TrashIcon } from '@heroicons/react/24/outline';
+import { TrashIcon, PencilIcon } from '@heroicons/react/24/outline';
 
 interface SchemeListProps {
   schemes: Scheme[];
   onSelect: (id: string) => void;
   onDelete: (id: string) => void;
+  onEdit: (id: string) => void;
 }
 
-const SchemeList: React.FC<SchemeListProps> = ({ schemes, onSelect, onDelete }) => {
+const SchemeList: React.FC<SchemeListProps> = ({ schemes, onSelect, onDelete, onEdit }) => {
   if (schemes.length === 0) return null;
   
   const handleDelete = (e: React.MouseEvent, id: string) => {
     e.stopPropagation();
     onDelete(id);
+  };
+
+  const handleEdit = (e: React.MouseEvent, id: string) => {
+    e.stopPropagation();
+    onEdit(id);
   };
 
   return (
@@ -52,13 +58,22 @@ const SchemeList: React.FC<SchemeListProps> = ({ schemes, onSelect, onDelete }) 
                 </div>
               </div>
             </div>
-            <button
-              onClick={(e) => handleDelete(e, scheme._id)}
-              className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 p-2 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-md"
-              title="Delete scheme"
-            >
-              <TrashIcon className="h-5 w-5" />
-            </button>
+            <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+              <button
+                onClick={(e) => handleEdit(e, scheme._id)}
+                className="p-2 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-md"
+                title="Edit scheme"
+              >
+                <PencilIcon className="h-5 w-5" />
+              </button>
+              <button
+                onClick={(e) => handleDelete(e, scheme._id)}
+                className="p-2 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-md"
+                title="Delete scheme"
+              >
+                <TrashIcon className="h-5 w-5" />
+              </button>
+            </div>
           </div>
         </div>
       ))}

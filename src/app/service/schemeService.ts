@@ -1,6 +1,6 @@
 import apiClient from "./apiClient";
 import { Scheme } from "@/app/types/scheme";
-import { getAuthHeaders } from "@/config/api";
+import { getAuthHeaders, API_BASE_URL } from "@/config/api";
 
 const API_BASE = "user";
 
@@ -45,6 +45,35 @@ export const deleteSchemeById = async (id: string) => {
     return response;
   } catch (error) {
     console.error('Error deleting scheme:', error);
+    throw error;
+  }
+};
+
+export const updateSchemeById = async (id: string, formData: FormData) => {
+  try {
+    const authHeaders = getAuthHeaders();
+    const token = authHeaders.Authorization;
+    if (!token) {
+      throw new Error('Authentication token not found');
+    }
+    
+    const response = await fetch(`${API_BASE_URL}/admin/updateSchemeById/${id}`, {
+      method: 'PUT',
+      headers: {
+        Authorization: token,
+      },
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || 'Failed to update scheme');
+    }
+
+    const result = await response.json();
+    return result;
+  } catch (error) {
+    console.error('Error updating scheme:', error);
     throw error;
   }
 };
