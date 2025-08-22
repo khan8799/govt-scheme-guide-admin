@@ -5,7 +5,7 @@ import Image from 'next/image';
 import { showSuccess, showError, showLoading } from '@/components/SweetAlert';
 import { API_BASE_URL } from '@/config/api';
 import { getAuthHeaders } from '@/config/api';
-import { getSchemeById, deleteSchemeById } from '@/app/service/schemeService';
+import { getSchemeById, deleteSchemeById, updateSchemeById } from '@/app/service/schemeService';
 import { parseBulletPoints } from '@/utils/textParsing';
 import Label from '@/components/form/Label';
 import {
@@ -32,6 +32,8 @@ const SchemePage = () => {
     e instanceof Error ? e.message : fallback;
 
   const [isAddMode, setIsAddMode] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [editingSchemeId, setEditingSchemeId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedScheme, setSelectedScheme] = useState<Scheme | null>(null);
@@ -45,6 +47,7 @@ const SchemePage = () => {
   const [totalSchemes, setTotalSchemes] = useState(0);
   const [hasMore, setHasMore] = useState(true);
   const [schemeToDelete, setSchemeToDelete] = useState<Scheme | null>(null);
+  const [showEditConfirmation, setShowEditConfirmation] = useState(false);
   const [formData, setFormData] = useState<SchemeFormData>({
     schemeTitle: '',
     publishedOn: new Date().toISOString().split('T')[0],
@@ -252,6 +255,130 @@ const SchemePage = () => {
     return '';
   };
 
+  const [existingImages, setExistingImages] = useState<{
+    bannerImage?: { url: string };
+    cardImage?: { url: string };
+  }>({});
+
+  const [originalFormData, setOriginalFormData] = useState<SchemeFormData | null>(null);
+
+  const hasFormChanges = () => {
+    if (!originalFormData || !isEditMode) return false;
+    
+    const keyFields: (keyof SchemeFormData)[] = [
+      'schemeTitle', 'about', 'objectives', 'category', 'state', 'excerpt',
+      'seoTitle', 'seoMetaDescription', 'isFeatured'
+    ];
+    
+    for (const field of keyFields) {
+      if (formData[field] !== originalFormData[field]) {
+        return true;
+      }
+    }
+    
+    const complexFields: (keyof SchemeFormData)[] = [
+      'keyHighlightsOfTheScheme', 'eligibilityCriteria', 'financialBenefits',
+      'requiredDocuments', 'importantDates', 'salientFeatures', 'applicationProcess',
+      'helplineNumber', 'frequentlyAskedQuestions', 'sourcesAndReferences',
+      'disclaimer', 'listCategory'
+    ];
+    
+    for (const field of complexFields) {
+      if (JSON.stringify(formData[field]) !== JSON.stringify(originalFormData[field])) {
+        return true;
+      }
+    }
+    
+    if (formData.bannerImage || formData.cardImage) {
+      return true;
+    }
+    
+    return false;
+  };
+
+  const handleEditScheme = async (id: string) => {
+    const loadingAlert = showLoading('Loading scheme for editing...');
+    try {
+      const response = await getSchemeById(id);
+      const scheme = response.data;
+      
+      setExistingImages({
+        bannerImage: scheme.bannerImage,
+        cardImage: scheme.cardImage
+      });
+      
+      const editFormData: SchemeFormData = {
+        schemeTitle: scheme.schemeTitle || '',
+        publishedOn: scheme.publishedOn ? new Date(scheme.publishedOn).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+        about: scheme.about || '',
+        objectives: scheme.objectives || '',
+        category: scheme.category ? (typeof scheme.category === 'string' ? scheme.category : scheme.category._id) : '',
+        state: scheme.state && scheme.state.length > 0 ? (typeof scheme.state[0] === 'string' ? scheme.state[0] : scheme.state[0]._id) : '',
+        excerpt: scheme.excerpt || '',
+        seoTitle: scheme.seoTitle || '',
+        seoMetaDescription: scheme.seoMetaDescription || '',
+        keyHighlightsOfTheScheme: scheme.keyHighlightsOfTheScheme || [{ schemeName: '', launchedBy: '' }],
+        eligibilityCriteria: scheme.eligibilityCriteria || [{ subTitle: '', subDescription: '' }],
+        financialBenefits: scheme.financialBenefits || [{ subTitle: '', subDescription: '' }],
+        requiredDocuments: scheme.requiredDocuments || [{ subTitle: '', subDescription: '' }],
+        importantDates: scheme.importantDates || [{ label: '', date: '' }],
+        salientFeatures: scheme.salientFeatures || [{ subTitle: '', subDescription: '' }],
+        applicationProcess: scheme.applicationProcess || [{ subTitle: '', subDescription: '' }],
+        helplineNumber: scheme.helplineNumber || { tollFreeNumber: '', emailSupport: '', availability: '' },
+        frequentlyAskedQuestions: scheme.frequentlyAskedQuestions || [{ question: '', answer: '' }],
+        sourcesAndReferences: scheme.sourcesAndReferences || { sourceName: '', sourceLink: '' },
+        disclaimer: scheme.disclaimer || { description: '' },
+        listCategory: scheme.listCategory || [],
+        bannerImage: null, 
+        cardImage: null,   
+        isFeatured: scheme.isFeatured ?? true
+      };
+      
+      setFormData(editFormData);
+      setEditingSchemeId(id);
+      setIsEditMode(true);
+      setIsAddMode(true);
+      setOriginalFormData(editFormData);
+      loadingAlert.close();
+    } catch (e: unknown) {
+      loadingAlert.close();
+      await showError(getErrorMessage(e, 'Failed to load scheme for editing'));
+    }
+  };
+
+  const resetForm = () => {
+    setFormData({
+      schemeTitle: '',
+      publishedOn: new Date().toISOString().split('T')[0],
+      about: '',
+      objectives: '',
+      category: '',
+      state: '',
+      excerpt: '',
+      seoTitle: '',
+      seoMetaDescription: '',
+      keyHighlightsOfTheScheme: [{ schemeName: '', launchedBy: '' }],
+      eligibilityCriteria: [{ subTitle: '', subDescription: '' }],
+      financialBenefits: [{ subTitle: '', subDescription: '' }],
+      requiredDocuments: [{ subTitle: '', subDescription: '' }],
+      importantDates: [{ label: '', date: '' }],
+      salientFeatures: [{ subTitle: '', subDescription: '' }],
+      applicationProcess: [{ subTitle: '', subDescription: '' }],
+      helplineNumber: { tollFreeNumber: '', emailSupport: '', availability: '' },
+      frequentlyAskedQuestions: [{ question: '', answer: '' }],
+      sourcesAndReferences: { sourceName: '', sourceLink: '' },
+      disclaimer: { description: '' },
+      listCategory: [],
+      bannerImage: null,
+      cardImage: null,
+      isFeatured: true
+    });
+    setIsEditMode(false);
+    setEditingSchemeId(null);
+    setExistingImages({});
+    setOriginalFormData(null);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.schemeTitle?.trim()) return await showError('Scheme Title is required');
@@ -260,7 +387,16 @@ const SchemePage = () => {
     if (!formData.category) return await showError('Category is required');
     if (!formData.state) return await showError('State is required');
 
-    const loadingAlert = showLoading('Creating scheme...');
+    if (isEditMode) {
+      setShowEditConfirmation(true);
+      return;
+    }
+
+    await submitForm();
+  };
+
+  const submitForm = async () => {
+    const loadingAlert = showLoading(isEditMode ? 'Updating scheme...' : 'Creating scheme...');
     try {
       const data = new FormData();
       const jsonFields = [
@@ -325,57 +461,57 @@ const SchemePage = () => {
       if (formData.cardImage) data.append('cardImage', formData.cardImage);
       data.append('isFeatured', String(Boolean(formData.isFeatured)));
 
-      const authHeaders = getAuthHeaders();
-      const res = await fetch(`${API_BASE_URL}/admin/registerScheme`, { 
-        method: 'POST', 
-        headers: authHeaders as HeadersInit, 
-        body: data,
-      });
-      if (!res.ok) {
-        let message = 'Failed to create scheme';
-        try {
-          const errorData = await res.json();
-          message = errorData.message || message;
-        } catch {
-          // Use default message if parsing fails
+      if (isEditMode) {
+        if (!formData.bannerImage && existingImages.bannerImage) {
+          data.append('preserveBannerImage', 'true');
         }
-        throw new Error(message);
+        if (!formData.cardImage && existingImages.cardImage) {
+          data.append('preserveCardImage', 'true');
+        }
       }
-      loadingAlert.close();
-      await showSuccess('Scheme created successfully!');
+
+      const authHeaders = getAuthHeaders();
+      
+      if (isEditMode && editingSchemeId) {
+        await updateSchemeById(editingSchemeId, data);
+        loadingAlert.close();
+        await showSuccess(`Scheme "${formData.schemeTitle}" updated successfully!`);
+      } else {
+        const res = await fetch(`${API_BASE_URL}/admin/registerScheme`, { 
+          method: 'POST', 
+          headers: authHeaders as HeadersInit, 
+          body: data,
+        });
+        if (!res.ok) {
+          let message = 'Failed to create scheme';
+          try {
+            const errorData = await res.json();
+            message = errorData.message || message;
+          } catch { 
+          }
+          throw new Error(message);
+        }
+        loadingAlert.close();
+        await showSuccess(`Scheme "${formData.schemeTitle}" created successfully!`);
+      }
+      
       setIsAddMode(false);
+      resetForm();
       resetFilters();
-      await loadSchemes();
-      setFormData({
-        schemeTitle: '',
-        publishedOn: new Date().toISOString().split('T')[0],
-        about: '',
-        objectives: '',
-        category: '',
-        state: '',
-        excerpt: '',
-        seoTitle: '',
-        seoMetaDescription: '',
-        keyHighlightsOfTheScheme: [{ schemeName: '', launchedBy: '' }],
-        eligibilityCriteria: [{ subTitle: '', subDescription: '' }],
-        financialBenefits: [{ subTitle: '', subDescription: '' }],
-        requiredDocuments: [{ subTitle: '', subDescription: '' }],
-        importantDates: [{ label: '', date: '' }],
-        salientFeatures: [{ subTitle: '', subDescription: '' }],
-        applicationProcess: [{ subTitle: '', subDescription: '' }],
-        helplineNumber: { tollFreeNumber: '', emailSupport: '', availability: '' },
-        frequentlyAskedQuestions: [{ question: '', answer: '' }],
-        sourcesAndReferences: { sourceName: '', sourceLink: '' },
-        disclaimer: { description: '' },
-        listCategory: [],
-        bannerImage: null,
-        cardImage: null,
-        isFeatured: true,
-      });
+      await loadSchemes(1, false);
     } catch (e: unknown) {
       loadingAlert.close();
-      await showError(getErrorMessage(e, 'Failed to create scheme'));
+      await showError(getErrorMessage(e, isEditMode ? 'Failed to update scheme' : 'Failed to create scheme'));
     }
+  };
+
+  const confirmEdit = () => {
+    setShowEditConfirmation(false);
+    submitForm();
+  };
+
+  const cancelEdit = () => {
+    setShowEditConfirmation(false);
   };
 
   const handleDeleteScheme = async (id: string) => {
@@ -455,12 +591,32 @@ const SchemePage = () => {
   const loadMoreSchemes = () => loadSchemes(currentPage + 1, true);
   const closeSchemeModal = () => setSelectedScheme(null);
 
+  const handleCancelForm = () => {
+    if (isEditMode && hasFormChanges()) {
+      setShowEditConfirmation(true);
+      return;
+    }
+    setIsAddMode(false);
+    resetForm();
+  };
+
+  const confirmCancel = () => {
+    setShowEditConfirmation(false);
+    setIsAddMode(false);
+    resetForm();
+  };
+
   return (
     <div className="p-6">
       <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Schemes</h1>
+        <div>
+          <h1 className="text-2xl font-bold">Schemes</h1>
+          {isEditMode && (
+            <p className="text-sm text-blue-600 mt-1">Editing scheme: {formData.schemeTitle}</p>
+          )}
+        </div>
         <div className="flex gap-2">
-          <button type="button" className="rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium hover:bg-gray-50" onClick={() => setIsAddMode(false)}>
+          <button type="button" className="rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium hover:bg-gray-50" onClick={handleCancelForm}>
             {isAddMode ? 'Back' : 'View All'}
           </button>
           {!isAddMode && (
@@ -544,7 +700,7 @@ const SchemePage = () => {
                 )}
               </div>
             ) : (
-              <SchemeList schemes={filteredSchemes} onSelect={fetchSchemeDetails} onDelete={handleDeleteScheme} />
+              <SchemeList schemes={filteredSchemes} onSelect={fetchSchemeDetails} onDelete={handleDeleteScheme} onEdit={handleEditScheme} />
             )}
 
             {filteredSchemes.length > 0 && (
@@ -594,6 +750,10 @@ const SchemePage = () => {
               onChange={handleFormChange}
               onFileChange={handleFileChange}
               onSubmit={handleSubmit}
+              isEditMode={isEditMode}
+              existingImages={existingImages}
+              loading={loading}
+              hasUnsavedChanges={hasFormChanges()}
             />
           </div>
 
@@ -601,7 +761,7 @@ const SchemePage = () => {
             <button
               type="button"
               className="px-6 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300"
-              onClick={() => setIsAddMode(false)}
+              onClick={handleCancelForm}
             >
               Cancel
             </button>
@@ -840,7 +1000,16 @@ const SchemePage = () => {
                 </Section>
               )}
 
-              <div className="mt-6 pt-6 border-t border-gray-200 text-right">
+              <div className="mt-6 pt-6 border-t border-gray-200 flex justify-between items-center">
+                <button 
+                  onClick={() => {
+                    closeSchemeModal();
+                    handleEditScheme(selectedScheme._id);
+                  }} 
+                  className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600"
+                >
+                  Edit Scheme
+                </button>
                 <button onClick={closeSchemeModal} className="px-4 py-2 bg-brand-500 text-white rounded-md hover:bg-brand-600">Close</button>
               </div>
             </div>
@@ -867,6 +1036,38 @@ const SchemePage = () => {
                 className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300"
               >
                 Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showEditConfirmation && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-md w-full max-h-[90vh] overflow-y-auto p-6">
+            <h3 className="text-xl font-bold mb-4">
+              {isEditMode ? 'Confirm Edit' : 'Confirm Cancel'}
+            </h3>
+            <p className="text-gray-700 mb-4">
+              {isEditMode 
+                ? `You are about to update the scheme "${formData.schemeTitle}". Are you sure you want to proceed?`
+                : `You have unsaved changes for the scheme "${formData.schemeTitle}". Are you sure you want to discard these changes?`
+              }
+            </p>
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={isEditMode ? confirmEdit : confirmCancel}
+                className={`px-4 py-2 text-white rounded-md hover:opacity-90 ${
+                  isEditMode ? 'bg-blue-500 hover:bg-blue-600' : 'bg-red-500 hover:bg-red-600'
+                }`}
+              >
+                {isEditMode ? 'Confirm Edit' : 'Yes, Cancel'}
+              </button>
+              <button
+                onClick={cancelEdit}
+                className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300"
+              >
+                {isEditMode ? 'Cancel' : 'No, Continue Editing'}
               </button>
             </div>
           </div>

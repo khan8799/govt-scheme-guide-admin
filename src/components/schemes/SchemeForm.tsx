@@ -21,9 +21,16 @@ interface SchemeFormProps {
   onChange: <K extends keyof SchemeFormData>(key: K, value: SchemeFormData[K]) => void;
   onFileChange: (key: 'bannerImage' | 'cardImage', file: File | null) => void;
   onSubmit: (e: React.FormEvent) => void;
+  isEditMode?: boolean;
+  existingImages?: {
+    bannerImage?: { url: string };
+    cardImage?: { url: string };
+  };
+  loading?: boolean;
+  hasUnsavedChanges?: boolean;
 }
 
-const SchemeForm: React.FC<SchemeFormProps> = ({ formFields, formData, onChange, onFileChange, onSubmit }) => {
+const SchemeForm: React.FC<SchemeFormProps> = ({ formFields, formData, onChange, onFileChange, onSubmit, isEditMode = false, existingImages = {}, loading = false, hasUnsavedChanges = false }) => {
   const extractId = (value: SchemeFormData['category'] | SchemeFormData['state']): string => {
     if (!value) return '';
     if (typeof value === 'string') return value;
@@ -249,7 +256,7 @@ const SchemeForm: React.FC<SchemeFormProps> = ({ formFields, formData, onChange,
                 const parsed = JSON.parse(v);
                 onChange(field.key, parsed as SchemeFormData[typeof field.key]);
               } catch {
-                // ignore
+                
               }
             }} placeholder={`Enter ${field.label} as JSON`} className="font-mono text-sm" />
             <p className="text-xs text-gray-500">Enter valid JSON format for {field.label.toLowerCase()}</p>
@@ -291,10 +298,27 @@ const SchemeForm: React.FC<SchemeFormProps> = ({ formFields, formData, onChange,
         return renderJsonField(field);
       case 'file':
         return (
-          <input type="file" accept="image/*" onChange={(e) => {
-            const file = e.target.files?.[0] || null;
-            if (field.key === 'bannerImage' || field.key === 'cardImage') onFileChange(field.key, file);
-          }} className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-brand-50 file:text-brand-700 hover:file:bg-brand-100" />
+          <div className="space-y-2">
+            {isEditMode && existingImages[field.key as keyof typeof existingImages] && (
+              <div className="mb-2">
+                <p className="text-sm text-gray-600 mb-2">Current image:</p>
+                <img 
+                  src={existingImages[field.key as keyof typeof existingImages]?.url} 
+                  alt={`Current ${field.key}`}
+                  className="w-32 h-24 object-cover rounded border"
+                />
+              </div>
+            )}
+            <input type="file" accept="image/*" onChange={(e) => {
+              const file = e.target.files?.[0] || null;
+              if (field.key === 'bannerImage' || field.key === 'cardImage') onFileChange(field.key, file);
+            }} className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-brand-50 file:text-brand-700 hover:file:bg-brand-100" />
+            {isEditMode && (
+              <p className="text-xs text-gray-500">
+                Leave empty to keep the current image, or select a new image to replace it.
+              </p>
+            )}
+          </div>
         );
       default:
         return null;
@@ -303,6 +327,23 @@ const SchemeForm: React.FC<SchemeFormProps> = ({ formFields, formData, onChange,
 
   return (
     <form onSubmit={onSubmit} className="bg-white rounded-2xl border border-gray-200 p-6">
+      <div className="mb-6">
+        <h2 className="text-xl font-semibold text-gray-900">
+          {isEditMode ? 'Edit Scheme' : 'Create New Scheme'}
+        </h2>
+        {isEditMode && (
+          <div className="mt-2 space-y-1">
+            <p className="text-sm text-gray-600">
+              Update the scheme details below. Leave image fields empty to keep the current images.
+            </p>
+            {hasUnsavedChanges && (
+              <p className="text-sm text-orange-600 font-medium">
+                ⚠️ You have unsaved changes
+              </p>
+            )}
+          </div>
+        )}
+      </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {formFields.map((field) => (
           <div key={field.key} className={field.type === 'textarea' || field.type === 'json' ? 'md:col-span-2' : ''}>
@@ -315,8 +356,8 @@ const SchemeForm: React.FC<SchemeFormProps> = ({ formFields, formData, onChange,
         ))}
       </div>
       <div className="flex justify-end mt-6">
-        <button type="submit" className="px-6 py-2 bg-success-500 text-white rounded-md hover:bg-success-600">
-          Create Scheme
+        <button type="submit" className="px-6 py-2 bg-success-500 text-white rounded-md hover:bg-success-600 disabled:opacity-50 disabled:cursor-not-allowed" disabled={loading}>
+          {loading ? 'Processing...' : (isEditMode ? 'Update Scheme' : 'Create Scheme')}
         </button>
       </div>
     </form>
