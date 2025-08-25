@@ -75,6 +75,7 @@ export interface Scheme {
 	sourcesAndReferences?: SchemeSourcesAndReferences;
 	disclaimer?: SchemeDisclaimer;
 	listCategory?: string[];
+    textWithHTMLParsing: string;
 }
 
 export interface SchemeFormData {
@@ -102,6 +103,7 @@ export interface SchemeFormData {
 	bannerImage: File | null;
 	cardImage: File | null;
 	isFeatured: boolean;
+    textWithHTMLParsing: string;
 }
 
 export type State = NamedEntity;

@@ -8,6 +8,7 @@ import { getAuthHeaders } from '@/config/api';
 import { getSchemeById, deleteSchemeById, updateSchemeById } from '@/app/service/schemeService';
 import { parseBulletPoints } from '@/utils/textParsing';
 import Label from '@/components/form/Label';
+
 import {
   Scheme,
   State,
@@ -55,6 +56,7 @@ const SchemePage = () => {
     objectives: '',
     category: '',
     state: '',
+    editorContent: '',
     excerpt: '',
     seoTitle: '',
     seoMetaDescription: '',
@@ -115,7 +117,8 @@ const SchemePage = () => {
     { label: 'List Category', key: 'listCategory', type: 'json' },
     { label: 'Featured', key: 'isFeatured', type: 'toggle' },
     { label: 'Banner Image', key: 'bannerImage', type: 'file' },
-    { label: 'Card Image', key: 'cardImage', type: 'file' }
+    { label: 'Card Image', key: 'cardImage', type: 'file' },
+    { label: 'Rich Text Content', key: 'textWithHTMLParsing', type: 'json' },
   ];
 
   const Section = ({ title, children }: { title: string; children: React.ReactNode }) => (
@@ -311,6 +314,7 @@ const SchemePage = () => {
         schemeTitle: scheme.schemeTitle || '',
         publishedOn: scheme.publishedOn ? new Date(scheme.publishedOn).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
         about: scheme.about || '',
+        textWithHTMLParsing: scheme.textWithHTMLParsing || '<p>Hello!</p>',
         objectives: scheme.objectives || '',
         category: scheme.category ? (typeof scheme.category === 'string' ? scheme.category : scheme.category._id) : '',
         state: scheme.state && scheme.state.length > 0 ? (typeof scheme.state[0] === 'string' ? scheme.state[0] : scheme.state[0]._id) : '',
@@ -354,6 +358,7 @@ const SchemePage = () => {
       objectives: '',
       category: '',
       state: '',
+      textWithHTMLParsing: '',
       excerpt: '',
       seoTitle: '',
       seoMetaDescription: '',
@@ -460,7 +465,7 @@ const SchemePage = () => {
       if (formData.bannerImage) data.append('bannerImage', formData.bannerImage);
       if (formData.cardImage) data.append('cardImage', formData.cardImage);
       data.append('isFeatured', String(Boolean(formData.isFeatured)));
-
+data.append('textWithHTMLParsing', String(formData.textWithHTMLParsing || '')); // Changed from editorContent
       if (isEditMode) {
         if (!formData.bannerImage && existingImages.bannerImage) {
           data.append('preserveBannerImage', 'true');
@@ -821,7 +826,6 @@ const SchemePage = () => {
                   )}
                 </Section>
               )}
-
               {selectedScheme.keyHighlightsOfTheScheme?.length > 0 && (
                 <Section title="Key Highlights">
                   <ul className="list-disc pl-5 space-y-1">
@@ -1073,7 +1077,6 @@ const SchemePage = () => {
           </div>
         </div>
       )}
-
     </div>
   );
 };

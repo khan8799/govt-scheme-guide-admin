@@ -6,7 +6,10 @@ import Select from '@/components/form/Select';
 import TextArea from '@/components/form/input/TextArea';
 import { SchemeFormData, SchemeKeyHighlight, SchemeSubSection, SchemeDateEntry, SchemeFAQ, SchemeHelplineNumber, SchemeSourcesAndReferences } from '@/app/types/scheme';
 import { PlusIcon, TrashIcon } from '@heroicons/react/24/outline';
-
+import dynamic from 'next/dynamic';
+const Tiptap  = dynamic(() => import("@/components/Tiptap"), {
+  ssr: false,
+});
 interface FormField {
   label: string;
   key: keyof SchemeFormData;
@@ -30,7 +33,7 @@ interface SchemeFormProps {
   hasUnsavedChanges?: boolean;
 }
 
-const SchemeForm: React.FC<SchemeFormProps> = ({ formFields, formData, onChange, onFileChange, onSubmit, isEditMode = false, existingImages = {}, loading = false, hasUnsavedChanges = false }) => {
+const SchemeForm: React.FC<SchemeFormProps> = ({ formFields, formData, onChange, onFileChange, onSubmit, isEditMode = false, existingImages = {}, loading = false, hasUnsavedChanges = false, textWithHTMLParsing}) => {
   const extractId = (value: SchemeFormData['category'] | SchemeFormData['state']): string => {
     if (!value) return '';
     if (typeof value === 'string') return value;
@@ -80,7 +83,13 @@ const SchemeForm: React.FC<SchemeFormProps> = ({ formFields, formData, onChange,
             </button>
           </div>
         );
-      case 'eligibilityCriteria':
+     case 'eligibilityCriteria':
+  return (
+    <Tiptap
+      content={formData.textWithHTMLParsing || '<p>Hello!</p>'} // Use textWithHTMLParsing
+      onChange={(html: string) => onChange('textWithHTMLParsing', html)} // Update textWithHTMLParsing
+    />
+  );
       case 'financialBenefits':
       case 'requiredDocuments':
       case 'salientFeatures':
