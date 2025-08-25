@@ -33,7 +33,7 @@ interface SchemeFormProps {
   hasUnsavedChanges?: boolean;
 }
 
-const SchemeForm: React.FC<SchemeFormProps> = ({ formFields, formData, onChange, onFileChange, onSubmit, isEditMode = false, existingImages = {}, loading = false, hasUnsavedChanges = false, textWithHTMLParsing}) => {
+const SchemeForm: React.FC<SchemeFormProps> = ({ formFields, formData, onChange, onFileChange, onSubmit, isEditMode = false, existingImages = {}, loading = false, hasUnsavedChanges = false}) => {
   const extractId = (value: SchemeFormData['category'] | SchemeFormData['state']): string => {
     if (!value) return '';
     if (typeof value === 'string') return value;

@@ -116,7 +116,7 @@ const Tiptap = ({ content = "<p>Hello World! 🌎</p>", onChange }: TiptapProps)
         {[1, 2, 3, 4, 5, 6].map((level) => (
           <button
             key={level}
-            onClick={() => editor.chain().focus().toggleHeading({ level }).run()}
+            onClick={() => editor.chain().focus().toggleHeading({ level: level as any }).run()}
             className={`px-2 py-1 rounded ${editor.isActive("heading", { level }) ? "bg-blue-500 text-white" : "bg-gray-200"}`}
           >
             H{level}

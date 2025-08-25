@@ -56,7 +56,7 @@ const SchemePage = () => {
     objectives: '',
     category: '',
     state: '',
-    editorContent: '',
+    textWithHTMLParsing: '',
     excerpt: '',
     seoTitle: '',
     seoMetaDescription: '',
