@@ -6,9 +6,10 @@ import { TrashIcon, PencilIcon } from '@heroicons/react/24/outline';
 
 interface SchemeListProps {
   schemes: Scheme[];
-  onSelect: (id: string) => void;
+  onSelect: (slug: string) => void;
   onDelete: (id: string) => void;
   onEdit: (id: string) => void;
+
 }
 
 const SchemeList: React.FC<SchemeListProps> = ({ schemes, onSelect, onDelete, onEdit }) => {
@@ -29,7 +30,10 @@ const SchemeList: React.FC<SchemeListProps> = ({ schemes, onSelect, onDelete, on
       {schemes.map((scheme) => (
         <div key={scheme._id} className="p-4 hover:bg-gray-50 cursor-pointer group">
           <div className="flex items-start gap-4">
-            <div className="flex-1 flex items-start gap-4" onClick={() => onSelect(scheme._id)}>
+            <div className="flex-1 flex items-start gap-4" onClick={() => {
+              const finalIdentifier = scheme.slug && scheme.slug.trim() !== '' ? scheme.slug : scheme._id;
+              onSelect(finalIdentifier);
+            }}>
               {scheme.cardImage && (
                 <div className="w-24 h-24 flex-shrink-0 relative">
                   <Image src={scheme.cardImage.url} alt={scheme.schemeTitle} fill className="object-cover rounded-lg" sizes="100px" />
@@ -55,6 +59,7 @@ const SchemeList: React.FC<SchemeListProps> = ({ schemes, onSelect, onDelete, on
                     </span>
                   )}
                   <span className="text-xs px-2 py-1 bg-gray-100 rounded-md">Published: {new Date(scheme.publishedOn).toLocaleDateString()}</span>
+                  
                 </div>
               </div>
             </div>

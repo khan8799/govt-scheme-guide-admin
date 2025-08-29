@@ -1,10 +1,12 @@
 "use client";
 import React from 'react';
+import Image from 'next/image';
 import Label from '@/components/form/Label';
 import Input from '@/components/form/input/InputField';
 import Select from '@/components/form/Select';
+import MultiSelect from '@/components/form/MultiSelect';
 import TextArea from '@/components/form/input/TextArea';
-import { SchemeFormData, SchemeKeyHighlight, SchemeSubSection, SchemeDateEntry, SchemeFAQ, SchemeHelplineNumber, SchemeSourcesAndReferences } from '@/app/types/scheme';
+import { SchemeFormData, SchemeSubSection, SchemeFAQ, SchemeHelplineNumber, SchemeSourcesAndReferences } from '@/app/types/scheme';
 import { PlusIcon, TrashIcon } from '@heroicons/react/24/outline';
 import dynamic from 'next/dynamic';
 const Tiptap  = dynamic(() => import("@/components/Tiptap"), {
@@ -13,7 +15,7 @@ const Tiptap  = dynamic(() => import("@/components/Tiptap"), {
 interface FormField {
   label: string;
   key: keyof SchemeFormData;
-  type: 'text' | 'textarea' | 'date' | 'json' | 'select' | 'multi-select' | 'file' | 'toggle';
+  type: 'text' | 'textarea' | 'date' | 'json' | 'select' | 'multi-select' | 'file' | 'toggle' | 'rich-text';
   required?: boolean;
   options?: Array<{ value: string; label: string }>;
 }
@@ -47,53 +49,9 @@ const SchemeForm: React.FC<SchemeFormProps> = ({ formFields, formData, onChange,
   const renderJsonField = (field: FormField) => {
     const value = formData[field.key] as unknown;
     switch (field.key) {
-      case 'keyHighlightsOfTheScheme':
-        return (
-          <div className="space-y-3">
-            {Array.isArray(value) && (value as SchemeKeyHighlight[]).map((item, index) => (
-              <div key={index} className="flex gap-2 items-start">
-                <div className="flex-1">
-                  <Input placeholder="Scheme Name" value={item.schemeName || ''} onChange={(e) => {
-                    const newValue = [...(value as SchemeKeyHighlight[])];
-                    newValue[index] = { ...item, schemeName: e.target.value };
-                    onChange('keyHighlightsOfTheScheme', newValue);
-                  }} />
-                </div>
-                <div className="flex-1">
-                  <Input placeholder="Launched By" value={item.launchedBy || ''} onChange={(e) => {
-                    const newValue = [...(value as SchemeKeyHighlight[])];
-                    newValue[index] = { ...item, launchedBy: e.target.value };
-                    onChange('keyHighlightsOfTheScheme', newValue);
-                  }} />
-                </div>
-                <button type="button" onClick={() => {
-                  const newValue = (value as SchemeKeyHighlight[]).filter((_, i) => i !== index);
-                  onChange('keyHighlightsOfTheScheme', newValue);
-                }} className="px-2 py-1 text-red-600 hover:bg-red-50 rounded">
-                  <TrashIcon className="h-4 w-4" />
-                </button>
-              </div>
-            ))}
-            <button type="button" onClick={() => {
-              const newValue = ([...(value as SchemeKeyHighlight[]), { schemeName: '', launchedBy: '' }] as SchemeKeyHighlight[]);
-              onChange('keyHighlightsOfTheScheme', newValue);
-            }} className="flex items-center gap-2 text-sm text-brand-600 hover:text-brand-700">
-              <PlusIcon className="h-4 w-4" />
-              Add Highlight
-            </button>
-          </div>
-        );
-     case 'eligibilityCriteria':
-  return (
-    <Tiptap
-      content={formData.textWithHTMLParsing || '<p>Hello!</p>'} // Use textWithHTMLParsing
-      onChange={(html: string) => onChange('textWithHTMLParsing', html)} // Update textWithHTMLParsing
-    />
-  );
-      case 'financialBenefits':
-      case 'requiredDocuments':
+
+
       case 'salientFeatures':
-      case 'applicationProcess':
         return (
           <div className="space-y-3">
             {Array.isArray(value) && (value as SchemeSubSection[]).map((item, index) => (
@@ -125,42 +83,7 @@ const SchemeForm: React.FC<SchemeFormProps> = ({ formFields, formData, onChange,
             </button>
           </div>
         );
-      case 'importantDates':
-        return (
-          <div className="space-y-3">
-            {Array.isArray(value) && (value as SchemeDateEntry[]).map((item, index) => (
-              <div key={index} className="flex gap-2 items-start">
-                <div className="flex-1">
-                  <Input placeholder="Label (e.g., Start Date, End Date)" value={item.label || ''} onChange={(e) => {
-                    const newValue = ([...(value as SchemeDateEntry[])]);
-                    newValue[index] = { ...item, label: e.target.value };
-                    onChange('importantDates', newValue);
-                  }} />
-                </div>
-                <div className="flex-1">
-                  <Input type="date" value={item.date || ''} onChange={(e) => {
-                    const newValue = ([...(value as SchemeDateEntry[])]);
-                    newValue[index] = { ...item, date: e.target.value };
-                    onChange('importantDates', newValue);
-                  }} />
-                </div>
-                <button type="button" onClick={() => {
-                  const newValue = (value as SchemeDateEntry[]).filter((_, i) => i !== index);
-                  onChange('importantDates', newValue);
-                }} className="px-2 py-1 text-red-600 hover:bg-red-50 rounded">
-                  <TrashIcon className="h-4 w-4" />
-                </button>
-              </div>
-            ))}
-            <button type="button" onClick={() => {
-              const newValue = ([...(value as SchemeDateEntry[]), { label: '', date: '' }]);
-              onChange('importantDates', newValue);
-            }} className="flex items-center gap-2 text-sm text-brand-600 hover:text-brand-700">
-              <PlusIcon className="h-4 w-4" />
-              Add Date
-            </button>
-          </div>
-        );
+
       case 'helplineNumber':
         return (
           <div className="space-y-3">
@@ -213,14 +136,33 @@ const SchemeForm: React.FC<SchemeFormProps> = ({ formFields, formData, onChange,
       case 'sourcesAndReferences':
         return (
           <div className="space-y-3">
-            <Input placeholder="Source Name" value={(value as SchemeSourcesAndReferences).sourceName || ''} onChange={(e) => {
-              const v = value as SchemeSourcesAndReferences;
-              onChange('sourcesAndReferences', { ...v, sourceName: e.target.value });
-            }} />
-            <Input placeholder="Source Link" value={(value as SchemeSourcesAndReferences).sourceLink || ''} onChange={(e) => {
-              const v = value as SchemeSourcesAndReferences;
-              onChange('sourcesAndReferences', { ...v, sourceLink: e.target.value });
-            }} />
+            {Array.isArray(value) && (value as SchemeSourcesAndReferences[]).map((item, index) => (
+              <div key={index} className="space-y-2">
+                <Input placeholder="Source Name" value={item.sourceName || ''} onChange={(e) => {
+                  const newValue = [...(value as SchemeSourcesAndReferences[])];
+                  newValue[index] = { ...item, sourceName: e.target.value };
+                  onChange('sourcesAndReferences', newValue);
+                }} />
+                <Input placeholder="Source Link" value={item.sourceLink || ''} onChange={(e) => {
+                  const newValue = [...(value as SchemeSourcesAndReferences[])];
+                  newValue[index] = { ...item, sourceLink: e.target.value };
+                  onChange('sourcesAndReferences', newValue);
+                }} />
+                <button type="button" onClick={() => {
+                  const newValue = (value as SchemeSourcesAndReferences[]).filter((_, i) => i !== index);
+                  onChange('sourcesAndReferences', newValue);
+                }} className="px-2 py-1 text-red-600 hover:bg-red-50 rounded">
+                  <TrashIcon className="h-4 w-4" />
+                </button>
+              </div>
+            ))}
+            <button type="button" onClick={() => {
+              const newValue = ([...(value as SchemeSourcesAndReferences[]), { sourceName: '', sourceLink: '' }] as SchemeSourcesAndReferences[]);
+              onChange('sourcesAndReferences', newValue);
+            }} className="flex items-center gap-2 text-sm text-brand-600 hover:text-brand-700">
+              <PlusIcon className="h-4 w-4" />
+              Add Source
+            </button>
           </div>
         );
       case 'disclaimer':
@@ -230,31 +172,25 @@ const SchemeForm: React.FC<SchemeFormProps> = ({ formFields, formData, onChange,
             onChange('disclaimer', { ...current, description: v });
           }} />
         );
+      case 'textWithHTMLParsing':
+        return (
+          <div className="space-y-2">
+            <Tiptap
+              content={formData.textWithHTMLParsing?.htmlDescription || '<p>Hello!</p>'}
+              onChange={(html: string) => onChange('textWithHTMLParsing', { htmlDescription: html } as unknown as SchemeFormData[typeof field.key])}
+            />
+            <p className="text-xs text-gray-500">Use the rich text editor above to create detailed content with formatting, tables, and more.</p>
+          </div>
+        );
       case 'listCategory':
         return (
-          <div className="space-y-3">
-            {Array.isArray(value) && (value as string[]).map((item, index) => (
-              <div key={index} className="flex gap-2 items-center">
-                <Input placeholder="Category name" value={item || ''} onChange={(e) => {
-                  const newValue = ([...(value as string[])]);
-                  newValue[index] = e.target.value;
-                  onChange('listCategory', newValue);
-                }} />
-                <button type="button" onClick={() => {
-                  const newValue = (value as string[]).filter((_, i) => i !== index);
-                  onChange('listCategory', newValue);
-                }} className="px-2 py-1 text-red-600 hover:bg-red-50 rounded">
-                  <TrashIcon className="h-4 w-4" />
-                </button>
-              </div>
-            ))}
-            <button type="button" onClick={() => {
-              const newValue = ([...(value as string[]), '']);
-              onChange('listCategory', newValue);
-            }} className="flex items-center gap-2 text-sm text-brand-600 hover:text-brand-700">
-              <PlusIcon className="h-4 w-4" />
-              Add Category
-            </button>
+          <div className="space-y-2">
+            <Input 
+              placeholder="List Category" 
+              value={(value as string) || ''} 
+              onChange={(e) => onChange('listCategory', e.target.value)} 
+            />
+            <p className="text-xs text-gray-500">Enter the list category for this scheme</p>
           </div>
         );
       default:
@@ -284,25 +220,66 @@ const SchemeForm: React.FC<SchemeFormProps> = ({ formFields, formData, onChange,
         return (
           <TextArea rows={3} value={(formData[field.key] as string) || ''} onChange={(v) => onChange(field.key, v as unknown as SchemeFormData[keyof SchemeFormData])} placeholder={`Enter ${field.label.toLowerCase()}`} />
         );
+      case 'rich-text':
+        return (
+          <div className="space-y-2">
+            <Tiptap 
+              content={field.key === 'textWithHTMLParsing' ? (formData[field.key] as { htmlDescription?: string })?.htmlDescription || '' : (formData[field.key] as string) || ''} 
+              onChange={(content) => {
+                if (field.key === 'textWithHTMLParsing') {
+                  onChange(field.key, { htmlDescription: content } as SchemeFormData['textWithHTMLParsing']);
+                } else {
+                  onChange(field.key, content as SchemeFormData[typeof field.key]);
+                }
+              }}
+            />
+            <div className="flex justify-between items-center text-xs text-gray-500">
+              <p>Use the toolbar above to format your content. You can add headings, lists, tables, links, and more.</p>
+              <p>Characters: {field.key === 'textWithHTMLParsing' ? (formData[field.key] as { htmlDescription?: string })?.htmlDescription?.length || 0 : (formData[field.key] as string)?.length || 0}</p>
+            </div>
+          </div>
+        );
       case 'date':
         return (
-          <Input type="date" value={(formData[field.key] as string) || ''} onChange={(e) => onChange(field.key, e.target.value as unknown as SchemeFormData[keyof SchemeFormData])} required={field.required} />
+          <Input 
+            type="date" 
+            value={(formData[field.key] as string) || ''} 
+            onChange={(e) => onChange(field.key, e.target.value as unknown as SchemeFormData[keyof SchemeFormData])} 
+            required={field.required}
+            onClick={(e) => {
+              // Ensure the date picker opens
+              const target = e.target as HTMLInputElement;
+              if (target.type === 'date') {
+                target.showPicker?.();
+              }
+            }}
+          />
         );
       case 'select':
         return (
           <Select options={field.options || []} value={field.key === 'category' ? extractId(formData.category) : field.key === 'state' ? extractId(formData.state) : ''} onChange={(v) => onChange(field.key, String(v) as unknown as SchemeFormData[keyof SchemeFormData])} placeholder={`Select ${field.label.toLowerCase()}`} required={field.required} />
         );
-      case 'toggle':
+              case 'toggle':
         return (
           <div className="flex items-center gap-2">
             <input type="checkbox" checked={Boolean(formData.isFeatured)} onChange={(e) => onChange('isFeatured', e.target.checked)} className="h-4 w-4" />
             <span className="text-sm text-gray-600">Mark as featured</span>
           </div>
         );
+
       case 'multi-select':
         return (
-          <Select isMulti options={field.options || []} value={Array.isArray(formData[field.key]) ? (formData[field.key] as string[]) : []} onChange={(v) => onChange(field.key, (Array.isArray(v) ? v : [String(v)]) as unknown as SchemeFormData[keyof SchemeFormData])} placeholder={`Select ${field.label.toLowerCase()}`} required={field.required} />
+          <MultiSelect 
+            options={field.options || []} 
+            value={Array.isArray(formData[field.key]) ? (formData[field.key] as unknown as string[]) : []} 
+            onChange={(v) => {
+              onChange(field.key, v as unknown as SchemeFormData[typeof field.key]);
+            }} 
+            placeholder={`Select ${field.label.toLowerCase()}`} 
+            required={field.required} 
+          />
         );
+
       case 'json':
         return renderJsonField(field);
       case 'file':
@@ -311,9 +288,11 @@ const SchemeForm: React.FC<SchemeFormProps> = ({ formFields, formData, onChange,
             {isEditMode && existingImages[field.key as keyof typeof existingImages] && (
               <div className="mb-2">
                 <p className="text-sm text-gray-600 mb-2">Current image:</p>
-                <img 
-                  src={existingImages[field.key as keyof typeof existingImages]?.url} 
+                <Image 
+                  src={existingImages[field.key as keyof typeof existingImages]?.url || ''} 
                   alt={`Current ${field.key}`}
+                  width={128}
+                  height={96}
                   className="w-32 h-24 object-cover rounded border"
                 />
               </div>
@@ -355,7 +334,7 @@ const SchemeForm: React.FC<SchemeFormProps> = ({ formFields, formData, onChange,
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {formFields.map((field) => (
-          <div key={field.key} className={field.type === 'textarea' || field.type === 'json' ? 'md:col-span-2' : ''}>
+          <div key={field.key} className={field.type === 'textarea' || field.type === 'json' || field.type === 'rich-text' ? 'md:col-span-2' : ''}>
             <Label>
               {field.label}
               {field.required && '*'}
