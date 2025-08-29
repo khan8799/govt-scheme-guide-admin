@@ -5,7 +5,7 @@ import Image from 'next/image';
 import { showSuccess, showError, showLoading } from '@/components/SweetAlert';
 import { API_BASE_URL } from '@/config/api';
 import { getAuthHeaders } from '@/config/api';
-import { getSchemeById, deleteSchemeById, updateSchemeById } from '@/app/service/schemeService';
+import { getSchemeBySlug, deleteSchemeById, updateSchemeById } from '@/app/service/schemeService';
 import { parseBulletPoints } from '@/utils/textParsing';
 import Label from '@/components/form/Label';
 
@@ -14,6 +14,7 @@ import {
   State,
   Category,
   SchemeFormData,
+  NamedEntity,
 } from '@/app/types/scheme';
 import Select from '@/components/form/Select';
 import SchemeList from '@/components/schemes/SchemeList';
@@ -22,7 +23,7 @@ import SchemeForm from '@/components/schemes/SchemeForm';
 interface FormField {
   label: string;
   key: keyof SchemeFormData;
-  type: 'text' | 'textarea' | 'date' | 'json' | 'select' | 'multi-select' | 'file' | 'toggle';
+  type: 'text' | 'textarea' | 'date' | 'json' | 'select' | 'multi-select' | 'file' | 'toggle' | 'rich-text';
   required?: boolean;
   options?: Array<{ value: string; label: string }>;
 }
@@ -38,6 +39,8 @@ const SchemePage = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedScheme, setSelectedScheme] = useState<Scheme | null>(null);
+  
+
   const [filteredSchemes, setFilteredSchemes] = useState<Scheme[]>([]);
   const [selectedState, setSelectedState] = useState<string>('');
   const [selectedCategory, setSelectedCategory] = useState<string>('');
@@ -55,30 +58,26 @@ const SchemePage = () => {
     about: '',
     objectives: '',
     category: '',
-    state: '',
-    textWithHTMLParsing: '',
+    state: [],
+    textWithHTMLParsing: { htmlDescription: '' },
     excerpt: '',
     seoTitle: '',
     seoMetaDescription: '',
-    keyHighlightsOfTheScheme: [{ schemeName: '', launchedBy: '' }],
-    eligibilityCriteria: [{ subTitle: '', subDescription: '' }],
-    financialBenefits: [{ subTitle: '', subDescription: '' }],
-    requiredDocuments: [{ subTitle: '', subDescription: '' }],
-    importantDates: [{ label: '', date: '' }],
+
     salientFeatures: [{ subTitle: '', subDescription: '' }],
-    applicationProcess: [{ subTitle: '', subDescription: '' }],
     helplineNumber: { 
       tollFreeNumber: '', 
       emailSupport: '', 
       availability: '' 
     },
     frequentlyAskedQuestions: [{ question: '', answer: '' }],
-    sourcesAndReferences: { sourceName: '', sourceLink: '' },
+    sourcesAndReferences: [{ sourceName: '', sourceLink: '' }],
     disclaimer: { description: '' },
-    listCategory: [],
+    listCategory: '',
     bannerImage: null,
     cardImage: null,
-    isFeatured: true
+    isFeatured: true,
+    slug: ''
   });
 
   const formFields: FormField[] = [
@@ -96,29 +95,23 @@ const SchemePage = () => {
     { 
       label: 'States', 
       key: 'state', 
-      type: 'select', 
+      type: 'multi-select', 
       required: true,
       options: states.map(state => ({ value: state._id, label: state.name }))
     },
     { label: 'Excerpt', key: 'excerpt', type: 'textarea' },
     { label: 'SEO Title', key: 'seoTitle', type: 'text' },
     { label: 'SEO Meta Description', key: 'seoMetaDescription', type: 'textarea' },
-    { label: 'Key Highlights', key: 'keyHighlightsOfTheScheme', type: 'json' },
-    { label: 'Eligibility Criteria', key: 'eligibilityCriteria', type: 'json' },
-    { label: 'Financial Benefits', key: 'financialBenefits', type: 'json' },
-    { label: 'Required Documents', key: 'requiredDocuments', type: 'json' },
-    { label: 'Important Dates', key: 'importantDates', type: 'json' },
     { label: 'Salient Features', key: 'salientFeatures', type: 'json' },
-    { label: 'Application Process', key: 'applicationProcess', type: 'json' },
     { label: 'Helpline Number', key: 'helplineNumber', type: 'json' },
     { label: 'FAQ', key: 'frequentlyAskedQuestions', type: 'json' },
     { label: 'Sources', key: 'sourcesAndReferences', type: 'json' },
     { label: 'Disclaimer', key: 'disclaimer', type: 'json' },
-    { label: 'List Category', key: 'listCategory', type: 'json' },
+    { label: 'List Category', key: 'listCategory', type: 'text' },
     { label: 'Featured', key: 'isFeatured', type: 'toggle' },
     { label: 'Banner Image', key: 'bannerImage', type: 'file' },
     { label: 'Card Image', key: 'cardImage', type: 'file' },
-    { label: 'Rich Text Content', key: 'textWithHTMLParsing', type: 'json' },
+    { label: 'Rich Text Content', key: 'textWithHTMLParsing', type: 'rich-text' },
   ];
 
   const Section = ({ title, children }: { title: string; children: React.ReactNode }) => (
@@ -218,14 +211,28 @@ const SchemePage = () => {
     loadSchemes(1, false);
   }, [selectedState, selectedCategory, loadSchemes]);
 
-  const fetchSchemeDetails = async (id: string) => {
-    const loadingAlert = showLoading('Loading scheme details...');
+  const fetchSchemeDetails = async (slug: string) => {
     try {
-      const response = await getSchemeById(id);
-      setSelectedScheme(response.data);
-      loadingAlert.close();
+      const scheme = filteredSchemes.find(s => {
+        const schemeIdentifier = s.slug && s.slug.trim() !== '' ? s.slug : s._id;
+        return schemeIdentifier === slug;
+      });
+      
+      if (scheme) {
+        setSelectedScheme(scheme);
+      } else {
+        // If not found in filtered schemes, try to fetch from API as fallback
+        const loadingAlert = showLoading('Loading scheme details...');
+        try {
+          const response = await getSchemeBySlug(slug);
+          setSelectedScheme(response.data);
+          loadingAlert.close();
+        } catch (e: unknown) {
+          loadingAlert.close();
+          await showError(getErrorMessage(e, 'Failed to load scheme details'));
+        }
+      }
     } catch (e: unknown) {
-      loadingAlert.close();
       await showError(getErrorMessage(e, 'Failed to load scheme details'));
     }
   };
@@ -258,6 +265,10 @@ const SchemePage = () => {
     return '';
   };
 
+
+
+
+
   const [existingImages, setExistingImages] = useState<{
     bannerImage?: { url: string };
     cardImage?: { url: string };
@@ -280,8 +291,7 @@ const SchemePage = () => {
     }
     
     const complexFields: (keyof SchemeFormData)[] = [
-      'keyHighlightsOfTheScheme', 'eligibilityCriteria', 'financialBenefits',
-      'requiredDocuments', 'importantDates', 'salientFeatures', 'applicationProcess',
+      'salientFeatures',
       'helplineNumber', 'frequentlyAskedQuestions', 'sourcesAndReferences',
       'disclaimer', 'listCategory'
     ];
@@ -302,8 +312,17 @@ const SchemePage = () => {
   const handleEditScheme = async (id: string) => {
     const loadingAlert = showLoading('Loading scheme for editing...');
     try {
-      const response = await getSchemeById(id);
-      const scheme = response.data;
+      let scheme = filteredSchemes.find(s => s._id === id);
+      
+      // If no schemes loaded, try to load them first
+      if (!scheme && filteredSchemes.length === 0) {
+        await loadSchemes(1, false);
+        scheme = filteredSchemes.find(s => s._id === id);
+      }
+      
+      if (!scheme) {
+        throw new Error('Scheme not found');
+      }
       
       setExistingImages({
         bannerImage: scheme.bannerImage,
@@ -314,25 +333,23 @@ const SchemePage = () => {
         schemeTitle: scheme.schemeTitle || '',
         publishedOn: scheme.publishedOn ? new Date(scheme.publishedOn).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
         about: scheme.about || '',
-        textWithHTMLParsing: scheme.textWithHTMLParsing || '<p>Hello!</p>',
+        textWithHTMLParsing: { 
+          htmlDescription: typeof scheme.textWithHTMLParsing === 'string' 
+            ? scheme.textWithHTMLParsing 
+            : (scheme.textWithHTMLParsing?.htmlDescription || '<p>Hello!</p>')
+        },
         objectives: scheme.objectives || '',
         category: scheme.category ? (typeof scheme.category === 'string' ? scheme.category : scheme.category._id) : '',
-        state: scheme.state && scheme.state.length > 0 ? (typeof scheme.state[0] === 'string' ? scheme.state[0] : scheme.state[0]._id) : '',
+        state: scheme.state && scheme.state.length > 0 ? scheme.state.map((s: string | NamedEntity) => typeof s === 'string' ? s : s._id) : [],
         excerpt: scheme.excerpt || '',
         seoTitle: scheme.seoTitle || '',
         seoMetaDescription: scheme.seoMetaDescription || '',
-        keyHighlightsOfTheScheme: scheme.keyHighlightsOfTheScheme || [{ schemeName: '', launchedBy: '' }],
-        eligibilityCriteria: scheme.eligibilityCriteria || [{ subTitle: '', subDescription: '' }],
-        financialBenefits: scheme.financialBenefits || [{ subTitle: '', subDescription: '' }],
-        requiredDocuments: scheme.requiredDocuments || [{ subTitle: '', subDescription: '' }],
-        importantDates: scheme.importantDates || [{ label: '', date: '' }],
         salientFeatures: scheme.salientFeatures || [{ subTitle: '', subDescription: '' }],
-        applicationProcess: scheme.applicationProcess || [{ subTitle: '', subDescription: '' }],
         helplineNumber: scheme.helplineNumber || { tollFreeNumber: '', emailSupport: '', availability: '' },
         frequentlyAskedQuestions: scheme.frequentlyAskedQuestions || [{ question: '', answer: '' }],
-        sourcesAndReferences: scheme.sourcesAndReferences || { sourceName: '', sourceLink: '' },
+        sourcesAndReferences: scheme.sourcesAndReferences || [{ sourceName: '', sourceLink: '' }],
         disclaimer: scheme.disclaimer || { description: '' },
-        listCategory: scheme.listCategory || [],
+        listCategory: scheme.listCategory || '',
         bannerImage: null, 
         cardImage: null,   
         isFeatured: scheme.isFeatured ?? true
@@ -358,22 +375,17 @@ const SchemePage = () => {
       objectives: '',
       category: '',
       state: '',
-      textWithHTMLParsing: '',
+      textWithHTMLParsing: { htmlDescription: '' },
       excerpt: '',
       seoTitle: '',
       seoMetaDescription: '',
-      keyHighlightsOfTheScheme: [{ schemeName: '', launchedBy: '' }],
-      eligibilityCriteria: [{ subTitle: '', subDescription: '' }],
-      financialBenefits: [{ subTitle: '', subDescription: '' }],
-      requiredDocuments: [{ subTitle: '', subDescription: '' }],
-      importantDates: [{ label: '', date: '' }],
+
       salientFeatures: [{ subTitle: '', subDescription: '' }],
-      applicationProcess: [{ subTitle: '', subDescription: '' }],
       helplineNumber: { tollFreeNumber: '', emailSupport: '', availability: '' },
       frequentlyAskedQuestions: [{ question: '', answer: '' }],
-      sourcesAndReferences: { sourceName: '', sourceLink: '' },
+      sourcesAndReferences: [{ sourceName: '', sourceLink: '' }],
       disclaimer: { description: '' },
-      listCategory: [],
+      listCategory: '',
       bannerImage: null,
       cardImage: null,
       isFeatured: true
@@ -391,6 +403,7 @@ const SchemePage = () => {
     if (!formData.objectives?.trim()) return await showError('Objectives is required');
     if (!formData.category) return await showError('Category is required');
     if (!formData.state) return await showError('State is required');
+    if (!formData.textWithHTMLParsing?.htmlDescription?.trim()) return await showError('Rich Text Content is required');
 
     if (isEditMode) {
       setShowEditConfirmation(true);
@@ -400,18 +413,14 @@ const SchemePage = () => {
     await submitForm();
   };
 
+
+
   const submitForm = async () => {
     const loadingAlert = showLoading(isEditMode ? 'Updating scheme...' : 'Creating scheme...');
     try {
       const data = new FormData();
       const jsonFields = [
-        'keyHighlightsOfTheScheme',
-        'eligibilityCriteria',
-        'financialBenefits',
-        'requiredDocuments',
-        'importantDates',
         'salientFeatures',
-        'applicationProcess',
         'helplineNumber',
         'frequentlyAskedQuestions',
         'sourcesAndReferences',
@@ -456,16 +465,23 @@ const SchemePage = () => {
       data.append('excerpt', String(formData.excerpt || ''));
       data.append('seoTitle', String(formData.seoTitle || ''));
       data.append('seoMetaDescription', String(formData.seoMetaDescription || ''));
+      data.append('slug', String(formData.slug || ''));
 
       const categoryId = extractId(formData.category);
       if (categoryId) data.append('category', JSON.stringify(categoryId)); else data.append('category', '""');
-      const stateId = extractId(formData.state);
-      if (stateId) data.append('state', JSON.stringify([stateId])); else data.append('state', '[]');
+      
+      // Handle multiple states
+      if (Array.isArray(formData.state)) {
+        data.append('state', JSON.stringify(formData.state));
+      } else {
+        const stateId = extractId(formData.state);
+        if (stateId) data.append('state', JSON.stringify([stateId])); else data.append('state', '[]');
+      }
 
       if (formData.bannerImage) data.append('bannerImage', formData.bannerImage);
       if (formData.cardImage) data.append('cardImage', formData.cardImage);
       data.append('isFeatured', String(Boolean(formData.isFeatured)));
-data.append('textWithHTMLParsing', String(formData.textWithHTMLParsing || '')); // Changed from editorContent
+      data.append('textWithHTMLParsing', String(formData.textWithHTMLParsing?.htmlDescription || ''));
       if (isEditMode) {
         if (!formData.bannerImage && existingImages.bannerImage) {
           data.append('preserveBannerImage', 'true');
@@ -774,24 +790,49 @@ data.append('textWithHTMLParsing', String(formData.textWithHTMLParsing || '')); 
         </div>
       )}
 
-      {selectedScheme && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+             {selectedScheme && (
+         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl max-w-5xl w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6">
-              <div className="flex justify-between items-start mb-4">
-                <h2 className="text-2xl font-bold">{selectedScheme.schemeTitle}</h2>
-                <button onClick={closeSchemeModal} className="text-gray-500 hover:text-gray-700">
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              </div>
+                             <div className="flex justify-between items-start mb-4">
+                 <div>
+                   <h2 className="text-2xl font-bold">{selectedScheme.schemeTitle}</h2>
+                 
+                 </div>
+                 <button onClick={closeSchemeModal} className="text-gray-500 hover:text-gray-700">
+                   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                   </svg>
+                 </button>
+               </div>
 
-              {selectedScheme.bannerImage && (
-                <div className="mb-6 rounded-lg overflow-hidden relative h-48">
-                  <Image src={selectedScheme.bannerImage.url} alt="Banner" fill className="object-cover" sizes="800px" />
-                </div>
-              )}
+                             {selectedScheme.bannerImage && (
+                 <div className="mb-6 rounded-lg overflow-hidden relative h-48">
+                   <Image src={selectedScheme.bannerImage.url} alt="Banner" fill className="object-cover" sizes="800px" />
+                 </div>
+               )}
+
+               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                 {selectedScheme.cardImage && (
+                   <div className="rounded-lg overflow-hidden relative h-32">
+                     <Image src={selectedScheme.cardImage.url} alt="Card" fill className="object-cover" sizes="400px" />
+                   </div>
+                 )}
+                 <div className="flex flex-col justify-center">
+                   {selectedScheme.isFeatured && (
+                     <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 mb-2">
+                       Featured Scheme
+                     </span>
+                   )}
+                   {selectedScheme.isActive !== undefined && (
+                     <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                       selectedScheme.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                     }`}>
+                       {selectedScheme.isActive ? 'Active' : 'Inactive'}
+                     </span>
+                   )}
+                 </div>
+               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
@@ -826,101 +867,6 @@ data.append('textWithHTMLParsing', String(formData.textWithHTMLParsing || '')); 
                   )}
                 </Section>
               )}
-              {selectedScheme.keyHighlightsOfTheScheme?.length > 0 && (
-                <Section title="Key Highlights">
-                  <ul className="list-disc pl-5 space-y-1">
-                    {selectedScheme.keyHighlightsOfTheScheme.map((item) => (
-                      <li key={item._id}>
-                        <strong>{item.schemeName}</strong> – {item.launchedBy}
-                      </li>
-                    ))}
-                  </ul>
-                </Section>
-              )}
-
-              {selectedScheme.eligibilityCriteria?.length > 0 && (
-                <Section title="Eligibility Criteria">
-                  {selectedScheme.eligibilityCriteria.map((item) => {
-                    const bulletPoints = parseBulletPoints(item.subDescription);
-                    return (
-                      <div key={item._id} className="mb-4">
-                        {item.subTitle && (
-                          <h4 className="font-medium mb-2 text-gray-700">{item.subTitle}</h4>
-                        )}
-                        {bulletPoints.length > 0 ? (
-                          <ul className="list-disc pl-5 space-y-1">
-                            {bulletPoints.map((point, index) => (
-                              <li key={index} className="text-gray-700">{point}</li>
-                            ))}
-                          </ul>
-                        ) : (
-                          <p className="text-gray-700">{item.subDescription}</p>
-                        )}
-                      </div>
-                    );
-                  })}
-                </Section>
-              )}
-
-              {selectedScheme.financialBenefits?.length > 0 && (
-                <Section title="Financial Benefits">
-                  {selectedScheme.financialBenefits.map((item) => {
-                    const bulletPoints = parseBulletPoints(item.subDescription);
-                    return (
-                      <div key={item._id} className="mb-4">
-                        {item.subTitle && (
-                          <h4 className="font-medium mb-2 text-gray-700">{item.subTitle}</h4>
-                        )}
-                        {bulletPoints.length > 0 ? (
-                          <ul className="list-disc pl-5 space-y-1">
-                            {bulletPoints.map((point, index) => (
-                              <li key={index} className="text-gray-700">{point}</li>
-                            ))}
-                          </ul>
-                        ) : (
-                          <p className="text-gray-700">{item.subDescription}</p>
-                        )}
-                      </div>
-                    );
-                  })}
-                </Section>
-              )}
-
-              {selectedScheme.requiredDocuments?.length > 0 && (
-                <Section title="Required Documents">
-                  {selectedScheme.requiredDocuments.map((item) => {
-                    const bulletPoints = parseBulletPoints(item.subDescription);
-                    return (
-                      <div key={item._id} className="mb-4">
-                        {item.subTitle && (
-                          <h4 className="font-medium mb-2 text-gray-700">{item.subTitle}</h4>
-                        )}
-                        {bulletPoints.length > 0 ? (
-                          <ul className="list-disc pl-5 space-y-1">
-                            {bulletPoints.map((point, index) => (
-                              <li key={index} className="text-gray-700">{point}</li>
-                            ))}
-                          </ul>
-                        ) : (
-                          <p className="text-gray-700">{item.subDescription}</p>
-                        )}
-                      </div>
-                    );
-                  })}
-                </Section>
-              )}
-
-              {selectedScheme.importantDates?.length > 0 && (
-                <Section title="Important Dates">
-                  <ul className="space-y-1">
-                    {selectedScheme.importantDates.map((date) => (
-                      <li key={date._id}>
-                        <strong>{date.label}:</strong> {new Date(date.date).toLocaleDateString()}
-                      </li>
-                    ))}
-                  </ul>
-                </Section>
-              )}
 
               {selectedScheme.salientFeatures?.length > 0 && (
                 <Section title="Salient Features">
@@ -946,29 +892,6 @@ data.append('textWithHTMLParsing', String(formData.textWithHTMLParsing || '')); 
                 </Section>
               )}
 
-              {selectedScheme.applicationProcess?.length > 0 && (
-                <Section title="Application Process">
-                  {selectedScheme.applicationProcess.map((item) => {
-                    const bulletPoints = parseBulletPoints(item.subDescription);
-                    return (
-                      <div key={item._id} className="mb-4">
-                        {item.subTitle && (
-                          <h4 className="font-medium mb-2 text-gray-700">{item.subTitle}</h4>
-                        )}
-                        {bulletPoints.length > 0 ? (
-                          <ul className="list-disc pl-5 space-y-1">
-                            {bulletPoints.map((point, index) => (
-                              <li key={index} className="text-gray-700">{point}</li>
-                            ))}
-                          </ul>
-                        ) : (
-                          <p className="text-gray-700">{item.subDescription}</p>
-                        )}
-                      </div>
-                    );
-                  })}
-                </Section>
-              )}
 
               {selectedScheme.helplineNumber && (
                 <Section title="Helpline Number">
@@ -992,17 +915,69 @@ data.append('textWithHTMLParsing', String(formData.textWithHTMLParsing || '')); 
                 </Section>
               )}
 
-              {selectedScheme.sourcesAndReferences && (
+              {selectedScheme.sourcesAndReferences && selectedScheme.sourcesAndReferences.length > 0 && (
                 <Section title="Sources & References">
-                  <p><strong>{selectedScheme.sourcesAndReferences.sourceName}</strong>: {selectedScheme.sourcesAndReferences.sourceLink}</p>
+                  <ul className="list-disc list-inside space-y-2">
+                    {selectedScheme.sourcesAndReferences.map((source, index) => (
+                      <li key={source._id || index}>
+                        <strong>{source.sourceName}</strong>: <a href={source.sourceLink} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">{source.sourceLink}</a>
+                      </li>
+                    ))}
+                  </ul>
                 </Section>
               )}
 
-              {selectedScheme.disclaimer?.description && (
-                <Section title="Disclaimer">
-                  <p>{selectedScheme.disclaimer.description}</p>
-                </Section>
-              )}
+                             {selectedScheme.textWithHTMLParsing?.htmlDescription && (
+                 <Section title="Detailed Content">
+                   <div 
+                     className="html-content"
+                     style={{
+                       lineHeight: '1.6',
+                       fontSize: '16px'
+                     }}
+                     dangerouslySetInnerHTML={{ __html: selectedScheme.textWithHTMLParsing.htmlDescription }}
+                   />
+
+                 </Section>
+               )}
+
+               {selectedScheme.listCategory && (
+                 <Section title="List Category">
+                   <p className="text-gray-700">{selectedScheme.listCategory}</p>
+                 </Section>
+               )}
+
+               {selectedScheme.author && (
+                 <Section title="Author">
+                   <p><strong>Name:</strong> {selectedScheme.author.name}</p>
+                   <p><strong>Email:</strong> {selectedScheme.author.email}</p>
+                 </Section>
+               )}
+
+               {(selectedScheme.createdAt || selectedScheme.updatedAt) && (
+                 <Section title="Metadata">
+                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-gray-600">
+                     {selectedScheme.createdAt && (
+                       <div>
+                         <strong>Created:</strong> {new Date(selectedScheme.createdAt).toLocaleString()}
+                         {selectedScheme.createdBy && <span> by {selectedScheme.createdBy.name}</span>}
+                       </div>
+                     )}
+                     {selectedScheme.updatedAt && (
+                       <div>
+                         <strong>Last Updated:</strong> {new Date(selectedScheme.updatedAt).toLocaleString()}
+                         {selectedScheme.updatedBy && <span> by {selectedScheme.updatedBy.name}</span>}
+                       </div>
+                     )}
+                   </div>
+                 </Section>
+               )}
+
+               {selectedScheme.disclaimer?.description && (
+                 <Section title="Disclaimer">
+                   <p>{selectedScheme.disclaimer.description}</p>
+                 </Section>
+               )}
 
               <div className="mt-6 pt-6 border-t border-gray-200 flex justify-between items-center">
                 <button 

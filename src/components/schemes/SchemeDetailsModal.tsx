@@ -22,7 +22,9 @@ const SchemeDetailsModal: React.FC<SchemeDetailsModalProps> = ({ scheme, onClose
       <div className="bg-white rounded-2xl max-w-5xl w-full max-h-[90vh] overflow-y-auto">
         <div className="p-6">
           <div className="flex justify-between items-start mb-4">
-            <h2 className="text-2xl font-bold">{scheme.schemeTitle}</h2>
+            <div>
+              <h2 className="text-2xl font-bold">{scheme.schemeTitle}</h2>
+            </div>
             <button onClick={onClose} className="text-gray-500 hover:text-gray-700" aria-label="Close">
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -36,6 +38,28 @@ const SchemeDetailsModal: React.FC<SchemeDetailsModalProps> = ({ scheme, onClose
             </div>
           )}
 
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            {scheme.cardImage && (
+              <div className="rounded-lg overflow-hidden relative h-32">
+                <Image src={scheme.cardImage.url} alt="Card" fill className="object-cover" sizes="400px" />
+              </div>
+            )}
+            <div className="flex flex-col justify-center">
+              {scheme.isFeatured && (
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 mb-2">
+                  Featured Scheme
+                </span>
+              )}
+              {scheme.isActive !== undefined && (
+                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                  scheme.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                }`}>
+                  {scheme.isActive ? 'Active' : 'Inactive'}
+                </span>
+              )}
+            </div>
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <h3 className="font-semibold mb-2">About</h3>
@@ -47,7 +71,7 @@ const SchemeDetailsModal: React.FC<SchemeDetailsModalProps> = ({ scheme, onClose
             </div>
           </div>
 
-          {scheme.keyHighlightsOfTheScheme?.length > 0 && (
+          {/* {scheme.keyHighlightsOfTheScheme?.length > 0 && (
             <Section title="Key Highlights">
               <ul className="list-disc pl-5 space-y-1">
                 {scheme.keyHighlightsOfTheScheme.map((item) => (
@@ -141,7 +165,7 @@ const SchemeDetailsModal: React.FC<SchemeDetailsModalProps> = ({ scheme, onClose
                 ))}
               </ul>
             </Section>
-          )}
+          )} */}
 
           {scheme.salientFeatures?.length > 0 && (
             <Section title="Salient Features">
@@ -219,17 +243,62 @@ const SchemeDetailsModal: React.FC<SchemeDetailsModalProps> = ({ scheme, onClose
             </Section>
           )}
 
-          {scheme.sourcesAndReferences && (
+          {scheme.sourcesAndReferences && scheme.sourcesAndReferences.length > 0 && (
             <Section title="Sources & References">
-              <p>
-                <strong>{scheme.sourcesAndReferences.sourceName}</strong>: {scheme.sourcesAndReferences.sourceLink}
-              </p>
+              <ul className="list-disc list-inside space-y-2">
+                {scheme.sourcesAndReferences.map((source, index) => (
+                  <li key={source._id || index}>
+                    <strong>{source.sourceName}</strong>: <a href={source.sourceLink} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">{source.sourceLink}</a>
+                  </li>
+                ))}
+              </ul>
+            </Section>
+          )}
+
+          {scheme.textWithHTMLParsing?.htmlDescription && (
+            <Section title="Detailed Content">
+              <div 
+                className="prose max-w-none"
+                dangerouslySetInnerHTML={{ __html: scheme.textWithHTMLParsing.htmlDescription }}
+              />
+            </Section>
+          )}
+
+          {scheme.listCategory && (
+            <Section title="List Category">
+              <p className="text-gray-700">{scheme.listCategory}</p>
+            </Section>
+          )}
+
+          {scheme.author && (
+            <Section title="Author">
+              <p><strong>Name:</strong> {scheme.author.name}</p>
+              <p><strong>Email:</strong> {scheme.author.email}</p>
             </Section>
           )}
 
           {scheme.disclaimer?.description && (
             <Section title="Disclaimer">
               <p>{scheme.disclaimer.description}</p>
+            </Section>
+          )}
+
+          {(scheme.createdAt || scheme.updatedAt) && (
+            <Section title="Metadata">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-gray-600">
+                {scheme.createdAt && (
+                  <div>
+                    <strong>Created:</strong> {new Date(scheme.createdAt).toLocaleString()}
+                    {scheme.createdBy && <span> by {scheme.createdBy.name}</span>}
+                  </div>
+                )}
+                {scheme.updatedAt && (
+                  <div>
+                    <strong>Last Updated:</strong> {new Date(scheme.updatedAt).toLocaleString()}
+                    {scheme.updatedBy && <span> by {scheme.updatedBy.name}</span>}
+                  </div>
+                )}
+              </div>
             </Section>
           )}
 

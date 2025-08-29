@@ -49,13 +49,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Check if user is authenticated on mount
-  useEffect(() => {
-    checkAuth();
-  }, []);
-
-
-
   const checkAuth = useCallback(async (): Promise<boolean> => {
     try {
       // Check if token exists in localStorage first
@@ -163,6 +156,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setIsLoading(false);
     }
   }, []);
+
+  // Check if user is authenticated on mount
+  useEffect(() => {
+    checkAuth();
+  }, [checkAuth]);
 
   const login = useCallback((newToken: string, userData: User) => {
     setToken(newToken);

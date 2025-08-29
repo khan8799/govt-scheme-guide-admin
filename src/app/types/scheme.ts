@@ -37,6 +37,7 @@ export interface SchemeHelplineNumber {
 export interface SchemeSourcesAndReferences {
 	sourceName: string;
 	sourceLink: string;
+	_id?: string;
 }
 
 export interface SchemeDisclaimer {
@@ -46,6 +47,16 @@ export interface SchemeDisclaimer {
 export interface SchemeImageRef {
 	url: string;
 	fileId: string;
+}
+
+export interface TextWithHTMLParsing {
+	htmlDescription: string;
+}
+
+export interface Author {
+	_id: string;
+	name: string;
+	email: string;
 }
 
 export interface Scheme {
@@ -59,11 +70,11 @@ export interface Scheme {
 	excerpt?: string;
 	seoTitle?: string;
 	seoMetaDescription?: string;
-	keyHighlightsOfTheScheme: SchemeKeyHighlight[];
-	eligibilityCriteria: SchemeSubSection[];
-	financialBenefits: SchemeSubSection[];
-	requiredDocuments: SchemeSubSection[];
-	importantDates: SchemeDateEntry[];
+	// keyHighlightsOfTheScheme: SchemeKeyHighlight[];
+	// eligibilityCriteria: SchemeSubSection[];
+	// financialBenefits: SchemeSubSection[];
+	// requiredDocuments: SchemeSubSection[];
+	// importantDates: SchemeDateEntry[];
 	salientFeatures: SchemeSubSection[];
 	applicationProcess: SchemeSubSection[];
 	frequentlyAskedQuestions: SchemeFAQ[];
@@ -72,10 +83,17 @@ export interface Scheme {
 	bannerImage?: SchemeImageRef;
 	cardImage?: SchemeImageRef;
 	helplineNumber?: SchemeHelplineNumber;
-	sourcesAndReferences?: SchemeSourcesAndReferences;
+	sourcesAndReferences?: SchemeSourcesAndReferences[];
 	disclaimer?: SchemeDisclaimer;
-	listCategory?: string[];
-    textWithHTMLParsing: string;
+	listCategory?: string;
+	textWithHTMLParsing?: TextWithHTMLParsing;
+	slug?: string;
+	author?: Author;
+	createdBy?: Author;
+	updatedBy?: Author;
+	createdAt?: string;
+	updatedAt?: string;
+	isDeleted?: boolean;
 }
 
 export interface SchemeFormData {
@@ -84,26 +102,26 @@ export interface SchemeFormData {
 	about: string;
 	objectives: string;
 	category: string | { value: string } | NamedEntity | '';
-	state: string | { value: string } | NamedEntity | '';
+	state: string | { value: string } | NamedEntity | '' | string[];
 	excerpt: string;
 	seoTitle: string;
 	seoMetaDescription: string;
-	keyHighlightsOfTheScheme: SchemeKeyHighlight[];
-	eligibilityCriteria: SchemeSubSection[];
-	financialBenefits: SchemeSubSection[];
-	requiredDocuments: SchemeSubSection[];
-	importantDates: SchemeDateEntry[];
+		// keyHighlightsOfTheScheme: SchemeKeyHighlight[];
+		// eligibilityCriteria: SchemeSubSection[];
+		// financialBenefits: SchemeSubSection[];
+		// requiredDocuments: SchemeSubSection[];
+		// importantDates: SchemeDateEntry[];
 	salientFeatures: SchemeSubSection[];
-	applicationProcess: SchemeSubSection[];
 	helplineNumber: SchemeHelplineNumber;
 	frequentlyAskedQuestions: SchemeFAQ[];
-	sourcesAndReferences: SchemeSourcesAndReferences;
+	sourcesAndReferences: SchemeSourcesAndReferences[];
 	disclaimer: SchemeDisclaimer;
-	listCategory: string[];
+	listCategory: string;
 	bannerImage: File | null;
 	cardImage: File | null;
 	isFeatured: boolean;
-    textWithHTMLParsing: string;
+	textWithHTMLParsing: TextWithHTMLParsing;
+	slug?: string;
 }
 
 export type State = NamedEntity;

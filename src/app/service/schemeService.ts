@@ -6,7 +6,12 @@ const API_BASE = "user";
 
 export const getAllSchemes = async () => {
   try {
-    const response = await apiClient.get<{ success: boolean; data: Scheme[] }>(`${API_BASE}/getAllSchemes`);
+    const authHeaders = getAuthHeaders();
+    const token = authHeaders.Authorization;
+    if (!token) {
+      throw new Error('Authentication token not found');
+    }
+    const response = await apiClient.get<{ success: boolean; data: Scheme[] }>(`${API_BASE}/getAllSchemes`, token);
     return response;
   } catch (error) {
     console.error('Error fetching schemes:', error);
@@ -16,7 +21,12 @@ export const getAllSchemes = async () => {
 
 export const getCategoriesWithSchemeCount = async () => {
   try {
-    const response = await apiClient.get<{ success: boolean; data: Array<{ _id: string; name: string; schemeCount: number }> }>(`${API_BASE}/categoriesWithSchemeCount`);
+    const authHeaders = getAuthHeaders();
+    const token = authHeaders.Authorization;
+    if (!token) {
+      throw new Error('Authentication token not found');
+    }
+    const response = await apiClient.get<{ success: boolean; data: Array<{ _id: string; name: string; schemeCount: number }> }>(`${API_BASE}/categoriesWithSchemeCount`, token);
     return response;
   } catch (error) {
     console.error('Error fetching categories:', error);
@@ -24,15 +34,31 @@ export const getCategoriesWithSchemeCount = async () => {
   }
 };
 
-export const getSchemeById = async (id: string) => {
+export const getSchemeBySlug = async (slug: string) => {
   try {
-    const response = await apiClient.get<{ success: boolean; data: Scheme }>(`${API_BASE}/getSchemeById/${id}`);
-    return response;
+    const authHeaders = getAuthHeaders();
+    const token = authHeaders.Authorization;
+    if (!token) {
+      throw new Error('Authentication token not found');
+    }
+    
+    const response = await fetch(`${API_BASE_URL}/${API_BASE}/getSchemeBySlug/${slug}`, {
+      headers: authHeaders as HeadersInit,
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Failed to fetch scheme: ${response.status} ${response.statusText}`);
+    }
+    
+    const data = await response.json();
+    return data;
   } catch (error) {
-    console.error('Error fetching scheme by ID:', error);
+    console.error('Error fetching scheme by slug:', error);
     throw error;
   }
 };
+
+
 
 export const deleteSchemeById = async (id: string) => {
   try {
@@ -49,31 +75,44 @@ export const deleteSchemeById = async (id: string) => {
   }
 };
 
-export const updateSchemeById = async (id: string, formData: FormData) => {
+export const updateSchemeById = async (_id: string, formData: FormData) => {
+  if (!_id || typeof _id !== 'string' || _id.trim() === '') {
+    throw new Error('Invalid scheme id provided');
+  }
+  
+  if (!formData || !(formData instanceof FormData)) {
+    throw new Error('Invalid FormData provided');
+  }
+  
   try {
     const authHeaders = getAuthHeaders();
     const token = authHeaders.Authorization;
     if (!token) {
       throw new Error('Authentication token not found');
     }
-    
-    const response = await fetch(`${API_BASE_URL}/admin/updateSchemeById/${id}`, {
+
+    const response = await fetch(`${API_BASE_URL}/admin/updateSchemeById/${_id}`, {
       method: 'PUT',
-      headers: {
-        Authorization: token,
-      },
+      headers: { Authorization: token },
       body: formData,
     });
 
     if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.message || 'Failed to update scheme');
+      let errorMessage = 'Failed to update scheme';
+      
+      try {
+        const errorData = await response.json();
+        errorMessage = errorData.message || errorData.error || errorMessage;
+      } catch {
+        errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+      }
+      
+      throw new Error(errorMessage);
     }
 
     const result = await response.json();
     return result;
   } catch (error) {
-    console.error('Error updating scheme:', error);
     throw error;
   }
 };
