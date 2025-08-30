@@ -2,7 +2,8 @@
 
 import { useEditor, EditorContent } from "@tiptap/react"
 import StarterKit from "@tiptap/starter-kit"
-import { Color, TextStyle } from "@tiptap/extension-text-style"
+import { Color } from "@tiptap/extension-color"
+import { TextStyle } from "@tiptap/extension-text-style"
 import Link from "@tiptap/extension-link"
 import Underline from "@tiptap/extension-underline"
 import Image from "@tiptap/extension-image"
@@ -11,8 +12,8 @@ import { Table } from "@tiptap/extension-table"
 import TableRow from "@tiptap/extension-table-row"
 import TableHeader from "@tiptap/extension-table-header"
 import TableCell from "@tiptap/extension-table-cell"
-import { useState, useEffect, JSX } from "react"
-import "./Tiptap.css"
+import { useState, useEffect, JSX, useRef } from "react"
+import { RemoveEmptyParagraphs } from "./common/RemoveEmptyParagraphs"
 
 interface TiptapProps {
   content?: string
@@ -39,6 +40,8 @@ interface SelectionInfo {
 const Tiptap = ({ content = "<p>Hello World! 🌎</p>", onChange }: TiptapProps) => {
   const [mode, setMode] = useState<"edit" | "preview" | "html">("edit")
   const [htmlValue, setHtmlValue] = useState(content)
+  const [isApplying, setIsApplying] = useState(false)
+  const editorRef = useRef<HTMLDivElement>(null)
   const [selectionInfo, setSelectionInfo] = useState<SelectionInfo>({
     isBold: false,
     isItalic: false,
@@ -58,14 +61,17 @@ const Tiptap = ({ content = "<p>Hello World! 🌎</p>", onChange }: TiptapProps)
 
   const editor = useEditor({
     extensions: [
-      // Configure table extensions first
       Table.configure({
         resizable: true,
       }),
       TableRow.configure({}),
       TableHeader.configure({}),
       TableCell.configure({}),
-      StarterKit,
+      StarterKit.configure({
+        heading: {
+          levels: [1, 2, 3, 4, 5, 6],
+        },
+      }),
       Color,
       TextStyle,
       Underline,
@@ -77,6 +83,8 @@ const Tiptap = ({ content = "<p>Hello World! 🌎</p>", onChange }: TiptapProps)
       }),
       Image.configure({ inline: false }),
       TextAlign.configure({ types: ["heading", "paragraph"] }),
+    RemoveEmptyParagraphs,
+
     ],
     content,
     immediatelyRender: false,
@@ -129,6 +137,8 @@ const Tiptap = ({ content = "<p>Hello World! 🌎</p>", onChange }: TiptapProps)
       newSelectionInfo.textAlign = "center"
     } else if (editor.isActive({ textAlign: "right" })) {
       newSelectionInfo.textAlign = "right"
+    } else if (editor.isActive({ textAlign: "justify" })) {
+      newSelectionInfo.textAlign = "justify"
     }
 
     setSelectionInfo(newSelectionInfo)
@@ -136,12 +146,13 @@ const Tiptap = ({ content = "<p>Hello World! 🌎</p>", onChange }: TiptapProps)
 
   useEffect(() => {
     if (!editor) return
-    // Update htmlValue when editor changes
+    
     const update = () => {
       const html = editor.getHTML()
       setHtmlValue(html)
       if (onChange) onChange(html)
     }
+    
     editor.on("update", update)
     return () => {
       editor.off("update", update)
@@ -151,7 +162,6 @@ const Tiptap = ({ content = "<p>Hello World! 🌎</p>", onChange }: TiptapProps)
   useEffect(() => {
     if (!editor) return
     
-    // Update selection info when editor changes
     const update = () => {
       updateSelectionInfo()
     }
@@ -181,16 +191,45 @@ const Tiptap = ({ content = "<p>Hello World! 🌎</p>", onChange }: TiptapProps)
 
   const handleModeChange = (newMode: "edit" | "preview" | "html") => {
     setMode(newMode)
+    if (newMode === "html") {
+      setHtmlValue(editor.getHTML())
+    }
   }
 
   const handleHtmlChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setHtmlValue(e.target.value)
-    editor.commands.setContent(e.target.value, {
-      parseOptions: {},      // optional
-      emitUpdate: true,      // trigger "update" event
-      errorOnInvalidContent: false, // optional
-    });   
-    if (onChange) onChange(e.target.value)
+  }
+
+  const applyHtmlChanges = () => {
+    if (!editor) return
+    
+    setIsApplying(true)
+    
+    // Use setTimeout to allow the UI to update before applying changes
+    setTimeout(() => {
+      try {
+        // Create a temporary element to sanitize HTML
+        const tempDiv = document.createElement('div')
+        tempDiv.innerHTML = htmlValue
+        
+        // Remove any problematic elements or attributes
+        const scripts = tempDiv.querySelectorAll('script')
+        scripts.forEach(script => script.remove())
+        
+        // Set the sanitized content
+        editor.commands.setContent(tempDiv.innerHTML)
+        
+        // Force a focus and selection update
+        editor.commands.focus('end')
+      } catch (error) {
+        console.error('Error applying HTML changes:', error)
+        // Fallback to safe content if there's an error
+        editor.commands.setContent('<p>Error applying HTML. Content reset.</p>')
+      } finally {
+        setIsApplying(false)
+        setMode("edit")
+      }
+    }, 100)
   }
 
   const FormatBadge = ({ type, value }: { type: string; value?: string }) => {
@@ -281,7 +320,7 @@ const Tiptap = ({ content = "<p>Hello World! 🌎</p>", onChange }: TiptapProps)
   };
 
   return (
-    <div>
+    <div className="p-4 bg-white rounded-lg shadow-md">
       <div className="sticky top-19 z-50 bg-white border-b border-gray-200 shadow-sm">
         {/* Selection Info Bar */}
         <div className="bg-gray-100 p-2 text-sm text-gray-700 border-b border-gray-300 flex items-center flex-wrap">
@@ -293,6 +332,40 @@ const Tiptap = ({ content = "<p>Hello World! 🌎</p>", onChange }: TiptapProps)
 
         {/* Toolbar */}
         <div className="p-1 py-3 flex flex-wrap gap-2">
+          {/* Mode Buttons */}
+          <div className="flex gap-2 mr-4">
+            <button 
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                handleModeChange("edit");
+              }} 
+              className={`px-3 py-1 rounded ${mode === "edit" ? "bg-blue-500 text-white" : "bg-gray-200 text-gray-700"}`}
+            >
+              Edit
+            </button>
+            <button 
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                handleModeChange("preview");
+              }} 
+              className={`px-3 py-1 rounded ${mode === "preview" ? "bg-green-500 text-white" : "bg-gray-200 text-gray-700"}`}
+            >
+              Preview
+            </button>
+            <button 
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                handleModeChange("html");
+              }} 
+              className={`px-3 py-1 rounded ${mode === "html" ? "bg-purple-500 text-white" : "bg-gray-200 text-gray-700"}`}
+            >
+              HTML
+            </button>
+          </div>
+
           {/* Bold, Italic, Underline, Strike */}
           <button
             type="button"
@@ -381,6 +454,16 @@ const Tiptap = ({ content = "<p>Hello World! 🌎</p>", onChange }: TiptapProps)
           >
             ➡
           </button>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.preventDefault();
+              editor.chain().focus().setTextAlign("justify").run();
+            }}
+            className={`px-2 py-1 rounded ${editor.isActive({ textAlign: "justify" }) ? "bg-blue-500 text-white" : "bg-gray-200"}`}
+          >
+            ≡
+          </button>
 
           {/* Lists */}
           <button
@@ -409,138 +492,67 @@ const Tiptap = ({ content = "<p>Hello World! 🌎</p>", onChange }: TiptapProps)
             type="button"
             onClick={(e) => {
               e.preventDefault();
-              try {
-                console.log('Inserting table...')
-                const result = editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()
-                console.log('Table insert result:', result)
-              } catch (error) {
-                console.error('Error inserting table:', error)
-              }
+              editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run();
             }}
-            className="px-2 py-1 bg-gray-200 rounded hover:bg-gray-300"
+            className={`px-2 py-1 rounded ${editor.isActive("table") ? "bg-blue-500 text-white" : "bg-gray-200"}`}
           >
-            📊 Table
+            Table
           </button>
-
-          <button
-            type="button"
-            onClick={(e) => {
-              e.preventDefault();
-              try {
-                if (editor.isActive('tableCell') || editor.isActive('tableHeader')) {
-                  editor.chain().focus().addColumnBefore().run()
-                }
-              } catch (error) {
-                console.error('Error adding column before:', error)
-              }
-            }}
-            disabled={!(editor.isActive('tableCell') || editor.isActive('tableHeader'))}
-            className="px-2 py-1 bg-gray-200 rounded hover:bg-gray-300 disabled:opacity-50"
-          >
-            ➕ Col
-          </button>
-          <button
-            type="button"
-            onClick={(e) => {
-              e.preventDefault();
-              try {
-                if (editor.isActive('tableCell') || editor.isActive('tableHeader')) {
-                  editor.chain().focus().addColumnAfter().run()
-                }
-              } catch (error) {
-                console.error('Error adding column after:', error)
-              }
-            }}
-            disabled={!(editor.isActive('tableCell') || editor.isActive('tableHeader'))}
-            className="px-2 py-1 bg-gray-200 rounded hover:bg-gray-300 disabled:opacity-50"
-          >
-            ➕ Col
-          </button>
-          <button
-            type="button"
-            onClick={(e) => {
-              e.preventDefault();
-              try {
-                if (editor.isActive('tableCell') || editor.isActive('tableHeader')) {
-                  editor.chain().focus().deleteColumn().run()
-                }
-              } catch (error) {
-                console.error('Error deleting column:', error)
-              }
-            }}
-            disabled={!(editor.isActive('tableCell') || editor.isActive('tableHeader'))}
-            className="px-2 py-1 bg-gray-200 rounded hover:bg-gray-300 disabled:opacity-50"
-          >
-            ➖ Col
-          </button>
-          <button
-            type="button"
-            onClick={(e) => {
-              e.preventDefault();
-              try {
-                if (editor.isActive('tableCell') || editor.isActive('tableHeader')) {
-                  editor.chain().focus().addRowBefore().run()
-                }
-              } catch (error) {
-                console.error('Error adding row before:', error)
-              }
-            }}
-            disabled={!(editor.isActive('tableCell') || editor.isActive('tableHeader'))}
-            className="px-2 py-1 bg-gray-200 rounded hover:bg-gray-300 disabled:opacity-50"
-          >
-            ➕ Row
-          </button>
-          <button
-            type="button"
-            onClick={(e) => {
-              e.preventDefault();
-              try {
-                if (editor.isActive('tableCell') || editor.isActive('tableHeader')) {
-                  editor.chain().focus().addRowAfter().run()
-                }
-              } catch (error) {
-                console.error('Error adding row after:', error)
-              }
-            }}
-            disabled={!(editor.isActive('tableCell') || editor.isActive('tableHeader'))}
-            className="px-2 py-1 bg-gray-200 rounded hover:bg-gray-300 disabled:opacity-50"
-          >
-            ➕ Row
-          </button>
-          <button
-            type="button"
-            onClick={(e) => {
-              e.preventDefault();
-              try {
-                if (editor.isActive('tableCell') || editor.isActive('tableHeader')) {
-                  editor.chain().focus().deleteRow().run()
-                }
-              } catch (error) {
-                console.error('Error deleting row:', error)
-              }
-            }}
-            disabled={!(editor.isActive('tableCell') || editor.isActive('tableHeader'))}
-            className="px-2 py-1 bg-gray-200 rounded hover:bg-gray-300 disabled:opacity-50"
-          >
-            ➖ Row
-          </button>
-          <button
-            type="button"
-            onClick={(e) => {
-              e.preventDefault();
-              try {
-                if (editor.isActive('tableCell') || editor.isActive('tableHeader')) {
-                  editor.chain().focus().deleteTable().run()
-                }
-              } catch (error) {
-                console.error('Error deleting table:', error)
-              }
-            }}
-            disabled={!(editor.isActive('tableCell') || editor.isActive('tableHeader'))}
-            className="px-2 py-1 bg-gray-200 rounded hover:bg-gray-300 disabled:opacity-50"
-          >
-            🗑️ Table
-          </button>
+          
+          {editor?.isActive("table") && (
+            <>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  editor.chain().focus().addColumnAfter().run();
+                }}
+                className="px-2 py-1 bg-gray-200 rounded hover:bg-gray-300"
+              >
+                +Col
+              </button>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  editor.chain().focus().addRowAfter().run();
+                }}
+                className="px-2 py-1 bg-gray-200 rounded hover:bg-gray-300"
+              >
+                +Row
+              </button>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  editor.chain().focus().deleteColumn().run();
+                }}
+                className="px-2 py-1 bg-gray-200 rounded hover:bg-gray-300"
+              >
+                -Col
+              </button>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  editor.chain().focus().deleteRow().run();
+                }}
+                className="px-2 py-1 bg-gray-200 rounded hover:bg-gray-300"
+              >
+                -Row
+              </button>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  editor.chain().focus().deleteTable().run();
+                }}
+                className="px-2 py-1 bg-gray-200 rounded hover:bg-gray-300"
+              >
+                × Table
+              </button>
+            </>
+          )}
 
           {/* Quote */}
           <button
@@ -551,7 +563,7 @@ const Tiptap = ({ content = "<p>Hello World! 🌎</p>", onChange }: TiptapProps)
             }}
             className={`px-2 py-1 rounded ${editor.isActive("blockquote") ? "bg-blue-500 text-white" : "bg-gray-200"}`}
           >
-            ❝ ❞
+            Quote
           </button>
 
           {/* Link */}
@@ -566,7 +578,7 @@ const Tiptap = ({ content = "<p>Hello World! 🌎</p>", onChange }: TiptapProps)
             }}
             className={`px-2 py-1 rounded ${editor.isActive("link") ? "bg-blue-500 text-white" : "bg-gray-200"}`}
           >
-            🔗 Link
+            Link
           </button>
           <button
             type="button"
@@ -577,12 +589,36 @@ const Tiptap = ({ content = "<p>Hello World! 🌎</p>", onChange }: TiptapProps)
             disabled={!editor.isActive("link")}
             className="px-2 py-1 bg-gray-200 rounded hover:bg-gray-300 disabled:opacity-50"
           >
-            🔗 Unlink
+            Unlink
           </button>
 
+          {/* Text Colors */}
+          <div className="flex items-center gap-1">
+            <input
+              type="color"
+              onChange={(e) => {
+                editor.chain().focus().setColor(e.target.value).run()
+              }}
+              value={editor.getAttributes("textStyle").color || "#000000"}
+              className="w-8 h-8 p-0 border rounded cursor-pointer"
+              title="Text Color"
+            />
+            <button
+              type="button"
+              onClick={(e) => {
+                e.preventDefault()
+                editor.chain().focus().unsetColor().run()
+              }}
+              className="px-2 py-1 bg-gray-200 rounded hover:bg-gray-300"
+              title="Reset Color"
+            >
+              🗑️
+            </button>
+          </div>
+
           {/* Image Upload */}
-          <label className="px-2 py-1 bg-gray-200 rounded cursor-pointer">
-            Upload Image
+          <label className="px-2 py-1 bg-gray-200 rounded cursor-pointer hover:bg-gray-300">
+            📷 Image
             <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
           </label>
 
@@ -590,95 +626,49 @@ const Tiptap = ({ content = "<p>Hello World! 🌎</p>", onChange }: TiptapProps)
           <button type="button" onClick={(e) => {
             e.preventDefault();
             editor.chain().focus().undo().run();
-          }} className="px-2 py-1 bg-gray-200 rounded">
+          }} className="px-2 py-1 bg-gray-200 rounded hover:bg-gray-300">
             Undo
           </button>
           <button type="button" onClick={(e) => {
             e.preventDefault();
             editor.chain().focus().redo().run();
-          }} className="px-2 py-1 bg-gray-200 rounded">
+          }} className="px-2 py-1 bg-gray-200 rounded hover:bg-gray-300">
             Redo
           </button>
-
-          {/* Text Colors */}
-          <input
-            type="color"
-            onChange={(e) => {
-              editor.chain().focus().setColor(e.target.value).run()
-            }}
-            value={editor.getAttributes("textStyle").color || "#000000"}
-            className="w-10 h-8 p-0 border rounded cursor-pointer"
-          />
-
-          <button
-            type="button"
-            onClick={(e) => {
-              e.preventDefault()
-              editor.chain().focus().unsetColor().run()
-            }}
-            className="px-2 py-1 bg-gray-200 rounded hover:bg-gray-300"
-          >
-            Reset Color
-          </button>
-
-          {/* Mode Buttons - All visible at once */}
-          <div className="flex gap-2 ml-auto">
-            <button 
-              type="button"
-              onClick={(e) => {
-                e.preventDefault();
-                handleModeChange("edit");
-              }} 
-              className={`px-3 py-1 rounded ${mode === "edit" ? "bg-blue-500 text-white" : "bg-gray-200 text-gray-700"}`}
-            >
-              Edit
-            </button>
-            <button 
-              type="button"
-              onClick={(e) => {
-                e.preventDefault();
-                handleModeChange("preview");
-              }} 
-              className={`px-3 py-1 rounded ${mode === "preview" ? "bg-green-500 text-white" : "bg-gray-200 text-gray-700"}`}
-            >
-              Preview
-            </button>
-            <button 
-              type="button"
-              onClick={(e) => {
-                e.preventDefault();
-                handleModeChange("html");
-              }} 
-              className={`px-3 py-1 rounded ${mode === "html" ? "bg-purple-500 text-white" : "bg-gray-200 text-gray-700"}`}
-            >
-              HTML
-            </button>
-          </div>
         </div>
       </div>
 
       {/* Editor / Preview / HTML */}
       {mode === "edit" && (
-        <div className="min-h-[300px]">
+        <div className="min-h-[300px] mt-4" ref={editorRef}>
           <EditorContent editor={editor} />
         </div>
       )}
 
       {mode === "preview" && (
         <div
-          className="border border-gray-300 rounded-md p-4 min-h-[300px] prose prose-sm max-w-none overflow-y-auto"
+          className="border border-gray-300 rounded-md p-4 min-h-[300px] prose prose-sm max-w-none overflow-y-auto mt-4"
           dangerouslySetInnerHTML={{ __html: htmlValue }}
         />
       )}
 
       {mode === "html" && (
-        <textarea
-          value={htmlValue}
-          onChange={handleHtmlChange}
-          className="border border-gray-300 rounded-md p-4 w-full min-h-[300px] font-mono text-sm resize-none"
-        />
+        <div className="relative mt-4">
+          <textarea
+            value={htmlValue}
+            onChange={handleHtmlChange}
+            className="border border-gray-300 rounded-md p-4 w-full min-h-[300px] font-mono text-sm resize-none"
+            placeholder="Enter your HTML here..."
+          />
+          <button
+            onClick={applyHtmlChanges}
+            disabled={isApplying}
+            className={`absolute bottom-4 right-4 px-4 py-2 text-white rounded-md ${isApplying ? 'bg-gray-500' : 'bg-blue-500 hover:bg-blue-600'}`}
+          >
+            {isApplying ? 'Applying...' : 'Apply Changes'}
+          </button>
+        </div>
       )}
-      
     </div>
   )
 }
