@@ -264,11 +264,7 @@ const SchemeDetailsModal: React.FC<SchemeDetailsModalProps> = ({ scheme, onClose
             </Section>
           )}
 
-          {scheme.listCategory && (
-            <Section title="List Category">
-              <p className="text-gray-700">{scheme.listCategory}</p>
-            </Section>
-          )}
+
 
           {scheme.author && (
             <Section title="Author">

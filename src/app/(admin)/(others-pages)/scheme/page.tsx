@@ -54,6 +54,7 @@ const SchemePage = () => {
   const [showEditConfirmation, setShowEditConfirmation] = useState(false);
   const [formData, setFormData] = useState<SchemeFormData>({
     schemeTitle: '',
+    slug: '',
     publishedOn: new Date().toISOString().split('T')[0],
     about: '',
     objectives: '',
@@ -73,15 +74,14 @@ const SchemePage = () => {
     frequentlyAskedQuestions: [{ question: '', answer: '' }],
     sourcesAndReferences: [{ sourceName: '', sourceLink: '' }],
     disclaimer: { description: '' },
-    listCategory: '',
     bannerImage: null,
     cardImage: null,
-    isFeatured: true,
-    slug: ''
+    isFeatured: true
   });
 
   const formFields: FormField[] = [
     { label: 'Scheme Title', key: 'schemeTitle', type: 'text', required: true },
+    { label: 'Slug', key: 'slug', type: 'text', required: true },
     { label: 'Published On', key: 'publishedOn', type: 'date', required: true },
     { label: 'About', key: 'about', type: 'textarea', required: true },
     { label: 'Objectives', key: 'objectives', type: 'textarea', required: true },
@@ -107,7 +107,6 @@ const SchemePage = () => {
     { label: 'FAQ', key: 'frequentlyAskedQuestions', type: 'json' },
     { label: 'Sources', key: 'sourcesAndReferences', type: 'json' },
     { label: 'Disclaimer', key: 'disclaimer', type: 'json' },
-    { label: 'List Category', key: 'listCategory', type: 'text' },
     { label: 'Featured', key: 'isFeatured', type: 'toggle' },
     { label: 'Banner Image', key: 'bannerImage', type: 'file' },
     { label: 'Card Image', key: 'cardImage', type: 'file' },
@@ -293,7 +292,7 @@ const SchemePage = () => {
     const complexFields: (keyof SchemeFormData)[] = [
       'salientFeatures',
       'helplineNumber', 'frequentlyAskedQuestions', 'sourcesAndReferences',
-      'disclaimer', 'listCategory'
+      'disclaimer'
     ];
     
     for (const field of complexFields) {
@@ -331,6 +330,7 @@ const SchemePage = () => {
       
       const editFormData: SchemeFormData = {
         schemeTitle: scheme.schemeTitle || '',
+        slug: scheme.slug || '',
         publishedOn: scheme.publishedOn ? new Date(scheme.publishedOn).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
         about: scheme.about || '',
         textWithHTMLParsing: { 
@@ -349,7 +349,6 @@ const SchemePage = () => {
         frequentlyAskedQuestions: scheme.frequentlyAskedQuestions || [{ question: '', answer: '' }],
         sourcesAndReferences: scheme.sourcesAndReferences || [{ sourceName: '', sourceLink: '' }],
         disclaimer: scheme.disclaimer || { description: '' },
-        listCategory: scheme.listCategory || '',
         bannerImage: null, 
         cardImage: null,   
         isFeatured: scheme.isFeatured ?? true
@@ -370,6 +369,7 @@ const SchemePage = () => {
   const resetForm = () => {
     setFormData({
       schemeTitle: '',
+      slug: '',
       publishedOn: new Date().toISOString().split('T')[0],
       about: '',
       objectives: '',
@@ -385,7 +385,6 @@ const SchemePage = () => {
       frequentlyAskedQuestions: [{ question: '', answer: '' }],
       sourcesAndReferences: [{ sourceName: '', sourceLink: '' }],
       disclaimer: { description: '' },
-      listCategory: '',
       bannerImage: null,
       cardImage: null,
       isFeatured: true
@@ -399,6 +398,7 @@ const SchemePage = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.schemeTitle?.trim()) return await showError('Scheme Title is required');
+    if (!formData.slug?.trim()) return await showError('Slug is required');
     if (!formData.about?.trim()) return await showError('About is required');
     if (!formData.objectives?.trim()) return await showError('Objectives is required');
     if (!formData.category) return await showError('Category is required');
@@ -425,7 +425,6 @@ const SchemePage = () => {
         'frequentlyAskedQuestions',
         'sourcesAndReferences',
         'disclaimer',
-        'listCategory',
       ] as const satisfies readonly (keyof SchemeFormData)[];
 
       for (const key of jsonFields) {
@@ -941,11 +940,7 @@ const SchemePage = () => {
                  </Section>
                )}
 
-               {selectedScheme.listCategory && (
-                 <Section title="List Category">
-                   <p className="text-gray-700">{selectedScheme.listCategory}</p>
-                 </Section>
-               )}
+
 
                {selectedScheme.author && (
                  <Section title="Author">

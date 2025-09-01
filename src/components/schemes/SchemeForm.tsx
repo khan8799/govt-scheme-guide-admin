@@ -182,17 +182,6 @@ const SchemeForm: React.FC<SchemeFormProps> = ({ formFields, formData, onChange,
             <p className="text-xs text-gray-500">Use the rich text editor above to create detailed content with formatting, tables, and more.</p>
           </div>
         );
-      case 'listCategory':
-        return (
-          <div className="space-y-2">
-            <Input 
-              placeholder="List Category" 
-              value={(value as string) || ''} 
-              onChange={(e) => onChange('listCategory', e.target.value)} 
-            />
-            <p className="text-xs text-gray-500">Enter the list category for this scheme</p>
-          </div>
-        );
       default:
         return (
           <div className="space-y-2">
