@@ -85,7 +85,6 @@ export interface Scheme {
 	helplineNumber?: SchemeHelplineNumber;
 	sourcesAndReferences?: SchemeSourcesAndReferences[];
 	disclaimer?: SchemeDisclaimer;
-	listCategory?: string;
 	textWithHTMLParsing?: TextWithHTMLParsing;
 	slug?: string;
 	author?: Author;
@@ -116,12 +115,11 @@ export interface SchemeFormData {
 	frequentlyAskedQuestions: SchemeFAQ[];
 	sourcesAndReferences: SchemeSourcesAndReferences[];
 	disclaimer: SchemeDisclaimer;
-	listCategory: string;
 	bannerImage: File | null;
 	cardImage: File | null;
 	isFeatured: boolean;
 	textWithHTMLParsing: TextWithHTMLParsing;
-	slug?: string;
+	slug: string;
 }
 
 export type State = NamedEntity;
