@@ -8,6 +8,7 @@ import MultiSelect from '@/components/form/MultiSelect';
 import TextArea from '@/components/form/input/TextArea';
 import { SchemeFormData, SchemeSubSection, SchemeFAQ, SchemeHelplineNumber, SchemeSourcesAndReferences } from '@/app/types/scheme';
 import { PlusIcon, TrashIcon } from '@heroicons/react/24/outline';
+import { showError } from '@/components/SweetAlert';
 import dynamic from 'next/dynamic';
 const Tiptap  = dynamic(() => import("@/components/Tiptap"), {
   ssr: false,
@@ -203,7 +204,12 @@ const SchemeForm: React.FC<SchemeFormProps> = ({ formFields, formData, onChange,
     switch (field.type) {
       case 'text':
         return (
-          <Input value={(formData[field.key] as string) || ''} onChange={(e) => onChange(field.key, e.target.value as unknown as SchemeFormData[keyof SchemeFormData])} placeholder={`Enter ${field.label.toLowerCase()}`} required={field.required} />
+          <div>
+            <Input value={(formData[field.key] as string) || ''} onChange={(e) => onChange(field.key, e.target.value as unknown as SchemeFormData[keyof SchemeFormData])} placeholder={`Enter ${field.label.toLowerCase()}`} required={field.required} />
+            {field.key === 'slug' && (formData[field.key] as string)?.includes(' ') && (
+              <p className="text-xs text-orange-600 mt-1">⚠️ Warning: No blank spaces allowed in slug</p>
+            )}
+          </div>
         );
       case 'textarea':
         return (
@@ -302,8 +308,19 @@ const SchemeForm: React.FC<SchemeFormProps> = ({ formFields, formData, onChange,
     }
   };
 
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (formData.slug && formData.slug.includes(' ')) {
+      showError('Invalid Slug', 'Slug cannot contain blank spaces.');
+      return;
+    }
+  
+    onSubmit(e);
+  };
+
   return (
-    <form onSubmit={onSubmit} className="bg-white rounded-2xl border border-gray-200 p-6">
+    <form onSubmit={handleSubmit} className="bg-white rounded-2xl border border-gray-200 p-6">
       <div className="mb-6">
         <h2 className="text-xl font-semibold text-gray-900">
           {isEditMode ? 'Edit Scheme' : 'Create New Scheme'}
