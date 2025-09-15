@@ -1,22 +1,29 @@
-"use client";
 import React from 'react';
 import Image from 'next/image';
-import { Scheme } from '@/app/types/scheme';
 import { parseBulletPoints } from '@/utils/textParsing';
+import { Scheme } from '@/app/types/scheme';
 
 interface SchemeDetailsModalProps {
-  scheme: Scheme;
+  scheme: Scheme | null;
   onClose: () => void;
+  onEdit: (id: string) => void;
 }
 
-const Section: React.FC<{ title: string; children: React.ReactNode }> = ({ title, children }) => (
-  <div className="mb-6">
-    <h3 className="font-semibold text-lg mb-3 text-gray-800">{title}</h3>
+const Section = ({ title, children }: { title: string; children: React.ReactNode }) => (
+  <div className="my-6">
+    <h3 className="text-lg font-semibold mb-2">{title}</h3>
     <div>{children}</div>
   </div>
 );
 
-const SchemeDetailsModal: React.FC<SchemeDetailsModalProps> = ({ scheme, onClose }) => {
+const SchemeDetailsModal: React.FC<SchemeDetailsModalProps> = React.memo(({ scheme, onClose, onEdit }) => {
+  if (!scheme) return null;
+
+  const handleEdit = () => {
+    onClose();
+    onEdit(scheme._id);
+  };
+
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl max-w-5xl w-full max-h-[90vh] overflow-y-auto">
@@ -25,7 +32,7 @@ const SchemeDetailsModal: React.FC<SchemeDetailsModalProps> = ({ scheme, onClose
             <div>
               <h2 className="text-2xl font-bold">{scheme.schemeTitle}</h2>
             </div>
-            <button onClick={onClose} className="text-gray-500 hover:text-gray-700" aria-label="Close">
+            <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
@@ -33,7 +40,7 @@ const SchemeDetailsModal: React.FC<SchemeDetailsModalProps> = ({ scheme, onClose
           </div>
 
           {scheme.bannerImage && (
-            <div className="mb-4 rounded-lg overflow-hidden relative h-48">
+            <div className="mb-6 rounded-lg overflow-hidden relative h-48">
               <Image src={scheme.bannerImage.url} alt="Banner" fill className="object-cover" sizes="800px" />
             </div>
           )}
@@ -71,101 +78,28 @@ const SchemeDetailsModal: React.FC<SchemeDetailsModalProps> = ({ scheme, onClose
             </div>
           </div>
 
-          {/* {scheme.keyHighlightsOfTheScheme?.length > 0 && (
-            <Section title="Key Highlights">
-              <ul className="list-disc pl-5 space-y-1">
-                {scheme.keyHighlightsOfTheScheme.map((item) => (
-                  <li key={item._id}>
-                    <strong>{item.schemeName}</strong> – {item.launchedBy}
-                  </li>
-                ))}
-              </ul>
+          {(scheme.excerpt || scheme.seoTitle || scheme.seoMetaDescription) && (
+            <Section title="SEO & Content">
+              {scheme.excerpt && (
+                <div className="mb-4">
+                  <h4 className="font-medium mb-2 text-gray-700">Excerpt</h4>
+                  <p className="text-gray-700">{scheme.excerpt}</p>
+                </div>
+              )}
+              {scheme.seoTitle && (
+                <div className="mb-4">
+                  <h4 className="font-medium mb-2 text-gray-700">SEO Title</h4>
+                  <p className="text-gray-700">{scheme.seoTitle}</p>
+                </div>
+              )}
+              {scheme.seoMetaDescription && (
+                <div className="mb-4">
+                  <h4 className="font-medium mb-2 text-gray-700">SEO Meta Description</h4>
+                  <p className="text-gray-700">{scheme.seoMetaDescription}</p>
+                </div>
+              )}
             </Section>
           )}
-
-          {scheme.eligibilityCriteria?.length > 0 && (
-            <Section title="Eligibility Criteria">
-              {scheme.eligibilityCriteria.map((item) => {
-                const bulletPoints = parseBulletPoints(item.subDescription);
-                return (
-                  <div key={item._id} className="mb-4">
-                    {item.subTitle && (
-                      <h4 className="font-medium mb-2 text-gray-700">{item.subTitle}</h4>
-                    )}
-                    {bulletPoints.length > 0 ? (
-                      <ul className="list-disc pl-5 space-y-1">
-                        {bulletPoints.map((point, index) => (
-                          <li key={index} className="text-gray-700">{point}</li>
-                        ))}
-                      </ul>
-                    ) : (
-                      <p className="text-gray-700">{item.subDescription}</p>
-                    )}
-                  </div>
-                );
-              })}
-            </Section>
-          )}
-
-          {scheme.financialBenefits?.length > 0 && (
-            <Section title="Financial Benefits">
-              {scheme.financialBenefits.map((item) => {
-                const bulletPoints = parseBulletPoints(item.subDescription);
-                return (
-                  <div key={item._id} className="mb-4">
-                    {item.subTitle && (
-                      <h4 className="font-medium mb-2 text-gray-700">{item.subTitle}</h4>
-                    )}
-                    {bulletPoints.length > 0 ? (
-                      <ul className="list-disc pl-5 space-y-1">
-                        {bulletPoints.map((point, index) => (
-                          <li key={index} className="text-gray-700">{point}</li>
-                        ))}
-                      </ul>
-                    ) : (
-                      <p className="text-gray-700">{item.subDescription}</p>
-                    )}
-                  </div>
-                );
-              })}
-            </Section>
-          )}
-
-          {scheme.requiredDocuments?.length > 0 && (
-            <Section title="Required Documents">
-              {scheme.requiredDocuments.map((item) => {
-                const bulletPoints = parseBulletPoints(item.subDescription);
-                return (
-                  <div key={item._id} className="mb-4">
-                    {item.subTitle && (
-                      <h4 className="font-medium mb-2 text-gray-700">{item.subTitle}</h4>
-                    )}
-                    {bulletPoints.length > 0 ? (
-                      <ul className="list-disc pl-5 space-y-1">
-                        {bulletPoints.map((point, index) => (
-                          <li key={index} className="text-gray-700">{point}</li>
-                        ))}
-                      </ul>
-                    ) : (
-                      <p className="text-gray-700">{item.subDescription}</p>
-                    )}
-                  </div>
-                );
-              })}
-            </Section>
-          )}
-
-          {scheme.importantDates?.length > 0 && (
-            <Section title="Important Dates">
-              <ul className="space-y-1">
-                {scheme.importantDates.map((date) => (
-                  <li key={date._id}>
-                    <strong>{date.label}:</strong> {new Date(date.date).toLocaleDateString()}
-                  </li>
-                ))}
-              </ul>
-            </Section>
-          )} */}
 
           {scheme.salientFeatures?.length > 0 && (
             <Section title="Salient Features">
@@ -191,41 +125,11 @@ const SchemeDetailsModal: React.FC<SchemeDetailsModalProps> = ({ scheme, onClose
             </Section>
           )}
 
-          {scheme.applicationProcess?.length > 0 && (
-            <Section title="Application Process">
-              {scheme.applicationProcess.map((item) => {
-                const bulletPoints = parseBulletPoints(item.subDescription);
-                return (
-                  <div key={item._id} className="mb-4">
-                    {item.subTitle && (
-                      <h4 className="font-medium mb-2 text-gray-700">{item.subTitle}</h4>
-                    )}
-                    {bulletPoints.length > 0 ? (
-                      <ul className="list-disc pl-5 space-y-1">
-                        {bulletPoints.map((point, index) => (
-                          <li key={index} className="text-gray-700">{point}</li>
-                        ))}
-                      </ul>
-                    ) : (
-                      <p className="text-gray-700">{item.subDescription}</p>
-                    )}
-                  </div>
-                );
-              })}
-            </Section>
-          )}
-
           {scheme.helplineNumber && (
             <Section title="Helpline Number">
-              <p>
-                <strong>Toll Free:</strong> {scheme.helplineNumber.tollFreeNumber || 'N/A'}
-              </p>
-              <p>
-                <strong>Email:</strong> {scheme.helplineNumber.emailSupport || 'N/A'}
-              </p>
-              <p>
-                <strong>Availability:</strong> {scheme.helplineNumber.availability || 'N/A'}
-              </p>
+              <p><strong>Toll Free:</strong> {scheme.helplineNumber.tollFreeNumber || 'N/A'}</p>
+              <p><strong>Email:</strong> {scheme.helplineNumber.emailSupport || 'N/A'}</p>
+              <p><strong>Availability:</strong> {scheme.helplineNumber.availability || 'N/A'}</p>
             </Section>
           )}
 
@@ -258,24 +162,20 @@ const SchemeDetailsModal: React.FC<SchemeDetailsModalProps> = ({ scheme, onClose
           {scheme.textWithHTMLParsing?.htmlDescription && (
             <Section title="Detailed Content">
               <div 
-                className="prose max-w-none"
+                className="html-content"
+                style={{
+                  lineHeight: '1.6',
+                  fontSize: '16px'
+                }}
                 dangerouslySetInnerHTML={{ __html: scheme.textWithHTMLParsing.htmlDescription }}
               />
             </Section>
           )}
 
-
-
           {scheme.author && (
             <Section title="Author">
               <p><strong>Name:</strong> {scheme.author.name}</p>
               <p><strong>Email:</strong> {scheme.author.email}</p>
-            </Section>
-          )}
-
-          {scheme.disclaimer?.description && (
-            <Section title="Disclaimer">
-              <p>{scheme.disclaimer.description}</p>
             </Section>
           )}
 
@@ -298,17 +198,27 @@ const SchemeDetailsModal: React.FC<SchemeDetailsModalProps> = ({ scheme, onClose
             </Section>
           )}
 
-          <div className="mt-6 pt-6 border-t border-gray-200 text-right">
-            <button onClick={onClose} className="px-4 py-2 bg-brand-500 text-white rounded-md hover:bg-brand-600">
-              Close
+          {scheme.disclaimer?.description && (
+            <Section title="Disclaimer">
+              <p>{scheme.disclaimer.description}</p>
+            </Section>
+          )}
+
+          <div className="mt-6 pt-6 border-t border-gray-200 flex justify-between items-center">
+            <button 
+              onClick={handleEdit}
+              className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600"
+            >
+              Edit Scheme
             </button>
+            <button onClick={onClose} className="px-4 py-2 bg-brand-500 text-white rounded-md hover:bg-brand-600">Close</button>
           </div>
         </div>
       </div>
     </div>
   );
-};
+});
+
+SchemeDetailsModal.displayName = 'SchemeDetailsModal';
 
 export default SchemeDetailsModal;
-
-
