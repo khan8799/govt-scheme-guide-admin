@@ -6,7 +6,7 @@ import Input from '@/components/form/input/InputField';
 import Select from '@/components/form/Select';
 import MultiSelect from '@/components/form/MultiSelect';
 import TextArea from '@/components/form/input/TextArea';
-import { SchemeFormData, SchemeSubSection, SchemeFAQ, SchemeHelplineNumber, SchemeSourcesAndReferences } from '@/app/types/scheme';
+import { SchemeFormData, SchemeSubSection, SchemeFAQ, SchemeHelplineNumber, SchemeSourcesAndReferences, SchemeLink } from '@/app/types/scheme';
 import { PlusIcon, TrashIcon } from '@heroicons/react/24/outline';
 import { showError } from '@/components/SweetAlert';
 import dynamic from 'next/dynamic';
@@ -172,6 +172,21 @@ const SchemeForm: React.FC<SchemeFormProps> = ({ formFields, formData, onChange,
             const current = value as { description: string };
             onChange('disclaimer', { ...current, description: v });
           }} />
+        );
+      case 'link1':
+      case 'link2':
+      case 'link3':
+        return (
+          <div className="space-y-3">
+            <Input placeholder="Link Name" value={(value as SchemeLink).name || ''} onChange={(e) => {
+              const v = value as SchemeLink;
+              onChange(field.key, { ...v, name: e.target.value });
+            }} />
+            <Input placeholder="Link URL" value={(value as SchemeLink).url || ''} onChange={(e) => {
+              const v = value as SchemeLink;
+              onChange(field.key, { ...v, url: e.target.value });
+            }} />
+          </div>
         );
       case 'textWithHTMLParsing':
         return (

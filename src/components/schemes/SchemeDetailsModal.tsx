@@ -133,6 +133,52 @@ const SchemeDetailsModal: React.FC<SchemeDetailsModalProps> = React.memo(({ sche
             </Section>
           )}
 
+          {(scheme.link1?.name || scheme.link2?.name || scheme.link3?.name) && (
+            <Section title="Additional Links">
+              <div className="space-y-3">
+                {scheme.link1?.name && (
+                  <div>
+                    <strong>{scheme.link1.name}:</strong>{' '}
+                    <a 
+                      href={scheme.link1.url.startsWith('http') ? scheme.link1.url : `https://${scheme.link1.url}`} 
+                      target="_blank" 
+                      rel="noopener noreferrer" 
+                      className="text-blue-600 hover:underline"
+                    >
+                      {scheme.link1.url}
+                    </a>
+                  </div>
+                )}
+                {scheme.link2?.name && (
+                  <div>
+                    <strong>{scheme.link2.name}:</strong>{' '}
+                    <a 
+                      href={scheme.link2.url.startsWith('http') ? scheme.link2.url : `https://${scheme.link2.url}`} 
+                      target="_blank" 
+                      rel="noopener noreferrer" 
+                      className="text-blue-600 hover:underline"
+                    >
+                      {scheme.link2.url}
+                    </a>
+                  </div>
+                )}
+                {scheme.link3?.name && (
+                  <div>
+                    <strong>{scheme.link3.name}:</strong>{' '}
+                    <a 
+                      href={scheme.link3.url.startsWith('http') ? scheme.link3.url : `https://${scheme.link3.url}`} 
+                      target="_blank" 
+                      rel="noopener noreferrer" 
+                      className="text-blue-600 hover:underline"
+                    >
+                      {scheme.link3.url}
+                    </a>
+                  </div>
+                )}
+              </div>
+            </Section>
+          )}
+
           {scheme.frequentlyAskedQuestions?.length > 0 && (
             <Section title="Frequently Asked Questions">
               <ul className="space-y-2">

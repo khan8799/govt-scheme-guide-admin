@@ -53,6 +53,11 @@ export interface TextWithHTMLParsing {
 	htmlDescription: string;
 }
 
+export interface SchemeLink {
+	name: string;
+	url: string;
+}
+
 export interface Author {
 	_id: string;
 	name: string;
@@ -86,6 +91,9 @@ export interface Scheme {
 	sourcesAndReferences?: SchemeSourcesAndReferences[];
 	disclaimer?: SchemeDisclaimer;
 	textWithHTMLParsing?: TextWithHTMLParsing;
+	link1?: SchemeLink;
+	link2?: SchemeLink;
+	link3?: SchemeLink;
 	slug?: string;
 	author?: Author;
 	createdBy?: Author;
@@ -119,6 +127,9 @@ export interface SchemeFormData {
 	cardImage: File | null;
 	isFeatured: boolean;
 	textWithHTMLParsing: TextWithHTMLParsing;
+	link1: SchemeLink;
+	link2: SchemeLink;
+	link3: SchemeLink;
 	slug: string;
 }
 
