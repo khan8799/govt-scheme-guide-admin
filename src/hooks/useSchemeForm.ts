@@ -27,6 +27,9 @@ export const useSchemeForm = () => {
     frequentlyAskedQuestions: [{ question: '', answer: '' }],
     sourcesAndReferences: [{ sourceName: '', sourceLink: '' }],
     disclaimer: { description: '' },
+    link1: { name: '', url: '' },
+    link2: { name: '', url: '' },
+    link3: { name: '', url: '' },
     bannerImage: null,
     cardImage: null,
     isFeatured: true
@@ -70,7 +73,7 @@ export const useSchemeForm = () => {
     const complexFields: (keyof SchemeFormData)[] = [
       'salientFeatures',
       'helplineNumber', 'frequentlyAskedQuestions', 'sourcesAndReferences',
-      'disclaimer'
+      'disclaimer', 'link1', 'link2', 'link3'
     ];
     
     for (const field of complexFields) {
@@ -112,6 +115,9 @@ export const useSchemeForm = () => {
       frequentlyAskedQuestions: [{ question: '', answer: '' }],
       sourcesAndReferences: [{ sourceName: '', sourceLink: '' }],
       disclaimer: { description: '' },
+      link1: { name: '', url: '' },
+      link2: { name: '', url: '' },
+      link3: { name: '', url: '' },
       bannerImage: null,
       cardImage: null,
       isFeatured: true
@@ -149,6 +155,9 @@ export const useSchemeForm = () => {
       frequentlyAskedQuestions: scheme.frequentlyAskedQuestions || [{ question: '', answer: '' }],
       sourcesAndReferences: scheme.sourcesAndReferences || [{ sourceName: '', sourceLink: '' }],
       disclaimer: scheme.disclaimer || { description: '' },
+      link1: scheme.link1 || { name: '', url: '' },
+      link2: scheme.link2 || { name: '', url: '' },
+      link3: scheme.link3 || { name: '', url: '' },
       bannerImage: null, 
       cardImage: null,   
       isFeatured: scheme.isFeatured ?? true
@@ -170,6 +179,9 @@ export const useSchemeForm = () => {
         'frequentlyAskedQuestions',
         'sourcesAndReferences',
         'disclaimer',
+        'link1',
+        'link2',
+        'link3',
       ] as const satisfies readonly (keyof SchemeFormData)[];
 
       for (const key of jsonFields) {
