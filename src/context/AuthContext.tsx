@@ -88,7 +88,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       // Try to validate with backend (but don't fail if it doesn't work)
       try {
-        const response = await fetch('https://govt-scheme-guide-api.onrender.com/api/user/verifyToken', {
+        const response = await fetch('https://scholar2-rdll.onrender.com/api/user/verifyToken', {
           method: 'GET',
           headers: {
             'Authorization': storedToken,
@@ -195,7 +195,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (!token) return;
     
     try {
-      const response = await fetch('https://govt-scheme-guide-api.onrender.com/api/user/verifyToken', {
+      const response = await fetch('https://scholar2-rdll.onrender.com/api/user/verifyToken', {
         method: 'GET',
         headers: {
           'Authorization': token,

@@ -30,7 +30,7 @@ interface StateListItem {
   totalSchemes: number;
 }
 
-const API_BASE_URL = 'https://govt-scheme-guide-api.onrender.com/api';
+const API_BASE_URL = 'https://scholar2-rdll.onrender.com/api';
 
 const StatePage = () => {
   const [states, setStates] = useState<StateListItem[]>([]);

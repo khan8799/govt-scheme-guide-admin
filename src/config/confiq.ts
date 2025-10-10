@@ -1,1 +1,1 @@
-export const API_BASE_URL = 'https://govt-scheme-guide-api.onrender.com/api';
+export const API_BASE_URL = 'https://scholar2-rdll.onrender.com/api';
